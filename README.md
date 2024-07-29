@@ -1,0 +1,2 @@
+# dotzbot
+discord bot yippee
