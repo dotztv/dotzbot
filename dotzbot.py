@@ -146,7 +146,7 @@ async def meme(ctx):
     if random_file:
         print(f'{ctx.author} got the meme {filenaming}')
     else:
-        print('ERROR: No meme found in the memefolder!') 
+        print('ERROR: No meme found in the memefolder!')
 
 @bot.command(description="Highest card wins")
 async def highcard(ctx):
@@ -180,7 +180,6 @@ async def highcard(ctx):
         winner = "bot"
     else:
         winner = "tie"
-    
     if winner == "user":
         embed = discord.Embed(
             title="High Card Result",
@@ -310,7 +309,7 @@ async def ping(ctx):
 
 @bot.command(description="Get info about the current server")
 async def serverinfo(ctx):
-    if ctx.guild == None:
+    if ctx.guild is None:
         commandorigin = "DM"
     else:
         commandorigin = "Server"
