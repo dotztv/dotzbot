@@ -6,6 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
+import secrets
 
 print('bot.py executed at ', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -24,7 +25,7 @@ def get_random_file(folder_path):
     files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
     if not files:
         return None
-    return os.path.join(folder_path, random.choice(files))
+    return os.path.join(folder_path, secrets.choice(files))
 
 def get_uptime():
     now = datetime.utcnow()
@@ -33,6 +34,7 @@ def get_uptime():
     hours, remainder = divmod(remainder, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
+
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -86,7 +88,7 @@ async def roll(ctx, dicesides: int = 100):
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.send(embed=embed)
     else:
-        diceroll = random.randint(1, dicesides)
+        diceroll = 1 + secrets.randbelow(dicesides)
         embed = discord.Embed(
             title="Dice Roll",
             description=f"{ctx.author.mention} rolled a {dicesides}-sided dice and got {diceroll}",
@@ -104,7 +106,7 @@ async def roll(ctx, dicesides: int = 100):
 @bot.command(description="Flip a coin, Heads or tails?")
 async def coinflip(ctx):
     coinsides = ["heads", "tails"]
-    coin = random.choice(coinsides)
+    coin = secrets.choice(coinsides)
     embed = discord.Embed(
         title="Coin Flip",
         description=f"{ctx.author.mention} flipped a coin and it landed on {coin}",
@@ -150,7 +152,7 @@ async def meme(ctx):
 
 @bot.command(description="Highest card wins")
 async def highcard(ctx):
-    usercard = random.randint(1, 13)
+    usercard = 1 + secrets.randbelow(13)
     if usercard == 1:
         readableusercard = "Ace"
     elif usercard == 11:
@@ -162,7 +164,7 @@ async def highcard(ctx):
     else:
         readableusercard = str(usercard)
 
-    botcard = random.randint(1, 13)
+    botcard = 1 + secrets.randbelow(13)
     if botcard == 1:
         readablebotcard = "Ace"
     elif botcard == 11:
@@ -212,7 +214,7 @@ async def highcard(ctx):
 async def rps(ctx, choice: str = "scissors"):
     rpschoices = ["rock", "paper", "scissors"]
     userchoice = choice.lower()
-    botchoice = random.choice(rpschoices)
+    botchoice = secrets.choice(rpschoices)
     result = ""
     color = discord.Color.gold()
 
@@ -313,12 +315,12 @@ async def serverinfo(ctx):
         commandorigin = "DM"
     else:
         commandorigin = "Server"
-
+    
     if commandorigin == "Server":
         servername = ctx.guild.name
     elif commandorigin == "DM":
         servername = "This is a DM"
-    
+
     if servername == "This is a DM":
         embeddesc = "But I'll try to give you some information anyways"
     elif servername == ctx.guild.name:
@@ -328,7 +330,7 @@ async def serverinfo(ctx):
         embedcolor = discord.Color.green()
     elif commandorigin == "DM":
         embedcolor = discord.Color.gold()
-
+    
     embed = discord.Embed(
         title=servername,
         description=embeddesc,
