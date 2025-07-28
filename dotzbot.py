@@ -248,12 +248,20 @@ async def eightball(ctx):
 
 @bot.command(description="Shows this list!")
 async def help(ctx):
+    is_owner = False
+    try:
+        is_owner = await bot.is_owner(ctx.author)
+    except Exception:
+        pass
+
     embed = discord.Embed(
         title="dotzbot commands",
         description="",
         color=discord.Color.gold()
     )
     for command in bot.commands:
+        if command.hidden and not is_owner:
+            continue
         embed.add_field(
             name=f"${command.name}",
             value=command.description or "No description.",
