@@ -1,6 +1,5 @@
 # Setup
 import logging
-import random
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -330,7 +329,7 @@ async def serverinfo(ctx):
         embedcolor = discord.Color.green()
     elif commandorigin == "DM":
         embedcolor = discord.Color.gold()
-    
+
     embed = discord.Embed(
         title=servername,
         description=embeddesc,
