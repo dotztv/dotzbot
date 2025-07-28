@@ -3,13 +3,12 @@ import os
 import discord
 from discord.ext import commands
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
 from dotenv import load_dotenv
 
 print(f'bot.py executed at ', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-timenow = str
 def get_timenow():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -18,9 +17,22 @@ def printlog(ctx):
     command = ctx.message.content
     location = ctx.guild.name if ctx.guild else "DMs"
     channel = f", {ctx.channel.name}" if ctx.guild else ""
-    timenow = get_timenow()
 
-    print(f"{user} used: '{command}' in {location}{channel} at {timenow}")
+    print(f"{user} used: '{command}' in {location}{channel} at {get_timenow()}")
+
+def get_random_file(folder_path):
+    files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+    if not files:
+        return None
+    return os.path.join(folder_path, random.choice(files))
+
+def get_uptime():
+    now = datetime.utcnow()
+    delta = now - bot_start_time
+    days, remainder = divmod(delta.total_seconds(), 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -30,28 +42,19 @@ bot = commands.Bot(command_prefix='$', description="epic dotzbot", intents=inten
 
 bot_start_time = datetime.utcnow()
 
-def get_random_file(folder_path):
-    files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-    if not files:
-        return None
-    return os.path.join(folder_path, random.choice(files))
 
 @bot.event
 async def on_ready():
     startuptime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f'Time and date is ', startuptime)
     print(f'{bot.user} is ready and active!')
-    user = bot.get_user(550378971426979856)
     embed = discord.Embed(
         title="dotzbot is online",
         description=startuptime,
         color=discord.Color.green()
     )
-    await user.send(embed=embed)
-    dzcbots1 = bot.get_channel(1303081523355844739)
-    await dzcbots1.send(embed=embed)
-    dzcbots2 = bot.get_channel(1399171277335564299)
-    await dzcbots2.send(embed=embed)
+    dotzbotchannel = bot.get_channel(1399359500049190912)
+    await dotzbotchannel.send(embed=embed)
 
 @bot.command(description="Shows this list!")
 async def help(ctx):
@@ -74,7 +77,6 @@ async def help(ctx):
 
 @bot.command(description="Roll an X sided dice")
 async def roll(ctx, dicesides: int = 100):
-    
     if dicesides <= 0:
         embed = discord.Embed(
             title="Dice Roll",
@@ -144,9 +146,7 @@ async def meme(ctx):
     if random_file:
         print(f'{ctx.author} got the meme {filenaming}')
     else:
-        print(f'ERROR: No meme found in the memefolder!')
-
-        
+        print(f'ERROR: No meme found in the memefolder!') 
 
 @bot.command(description="Highest card wins")
 async def highcard(ctx):
@@ -214,7 +214,6 @@ async def rps(ctx, choice: str = "scissors"):
     rpschoices = ["rock", "paper", "scissors"]
     userchoice = choice.lower()
     botchoice = random.choice(rpschoices)
-
     result = ""
     color = discord.Color.gold()
 
@@ -260,7 +259,6 @@ async def rps(ctx, choice: str = "scissors"):
 
 @bot.command(description="Get info about a UserID")
 async def userinfo(ctx, userid: int = 1267637358942224516):
-    # Always fetch user to get banner
     user = await bot.fetch_user(userid)
     member = ctx.guild.get_member(userid) if ctx.guild else None
     target = member if member else user
@@ -288,10 +286,8 @@ async def userinfo(ctx, userid: int = 1267637358942224516):
             name="Roles",
             value=", ".join([role.name for role in member.roles if role.name != "@everyone"])
         )
-    # Avatar as thumbnail
     if target.avatar:
         embed.set_thumbnail(url=target.avatar.url)
-    # Banner as image (if exists)
     if hasattr(user, "banner") and user.banner:
         embed.set_image(url=user.banner.url)
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
@@ -368,14 +364,9 @@ async def serverinfo(ctx):
 
     printlog(ctx)
 
-@bot.command(description="Show how long the bot has been running")
+@bot.command(description="Show how long the bot has been running") # this one was done by github copilot
 async def uptime(ctx):
-    now = datetime.utcnow()
-    delta = now - bot_start_time
-    days, remainder = divmod(delta.total_seconds(), 86400)
-    hours, remainder = divmod(remainder, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    uptime_str = f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
+    uptime_str = get_uptime()
     embed = discord.Embed(
         title="Uptime",
         description=f"The bot has been running for: **{uptime_str}**",
@@ -395,8 +386,17 @@ async def botinfo(ctx):
     # discordpy version
     # os/version
 
-    
     await ctx.send("Command still in the works, so no info for you yet")
     printlog(ctx)
+
+@bot.command(description="Shuts down the bot (owner only)")
+@commands.is_owner()
+async def shutdown(ctx):
+    await ctx.send("Shutting down...")
+    printlog(ctx)
+    print(f'CTRL+C Detected, shutting down.')
+    print(f'Time is {get_timenow()}')
+    print(f'Bot uptime at shutdown: {get_uptime()}')
+    await bot.close()
 
 bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)

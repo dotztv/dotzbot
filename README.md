@@ -13,7 +13,6 @@ Maybe:
 > Text to speech with downloadable mp3. strong maybe as i'll need to learn so much more for this  
 > slash commands  
 > turn all commands into files, the main file is getting too big  
-  
 Most likely:  
 > Prune  
 > Punishment commands (Warn/Kick/Mute/Ban/Timeout) with permission checks  
@@ -27,7 +26,6 @@ Most likely:
 > 8ball  
 > Shutdown message (just gotta learn how)  
 > dotzbot status channel  
-  
 Denied:  
 > Poker, Too complicated for me.  
 > Code better, too hard  
