@@ -79,8 +79,8 @@ async def meme(ctx):
         )
         embed.add_field(name="", value=f"{num_files} Files")
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-        await ctx.send(embed=embed)
-        await ctx.send(file=discord.File(random_file))
+        await ctx.reply(embed=embed, mention_author=True)
+        await ctx.reply(file=discord.File(random_file), mention_author=True)
     else:
         embed = discord.Embed(
             title="No Memes Found",
@@ -89,14 +89,14 @@ async def meme(ctx):
         )
         embed.add_field(name="", value=f"{num_files} Files")
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-        await ctx.send(embed=embed)
+        await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
     if random_file:
         print(f'{ctx.author} got the meme {filenaming}')
     else:
         print('ERROR: No meme found in the memefolder!')
 
-@bot.command(description="Roll an X sided dice")
+@bot.command(description="Roll an X sided dice", aliases=["dice", "diceroll"])
 async def roll(ctx, dicesides: int = 100):
     if dicesides <= 0:
         embed = discord.Embed(
@@ -105,7 +105,7 @@ async def roll(ctx, dicesides: int = 100):
             color=discord.Color.red()
         )
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-        await ctx.send(embed=embed)
+        await ctx.reply(embed=embed, mention_author=True)
         printlog(ctx)
         print(f"{ctx.author} just tried to roll a {dicesides}-sided dice")
         return
@@ -117,11 +117,11 @@ async def roll(ctx, dicesides: int = 100):
         color=discord.Color.green()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
     print(f'{ctx.author}\'s {dicesides}-sided dice landed on {diceroll}')
 
-@bot.command(description="Flip a coin, Heads or tails?")
+@bot.command(description="Flip a coin, Heads or tails?", aliases=["cf", "coin", "flip"])
 async def coinflip(ctx):
     coinsides = ["heads", "tails"]
     coin = secrets.choice(coinsides)
@@ -131,7 +131,7 @@ async def coinflip(ctx):
         color=discord.Color.green()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
     print(f'{ctx.author}\'s coin landed on {coin}')
 
@@ -188,7 +188,7 @@ async def highcard(ctx):
             color=discord.Color.grey()
         )
         print(f'{ctx.author} and {bot.user} tied with {readableusercard}')
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
 
 @bot.command(description="Play Rock Paper Scissors, default choice is scissors")
@@ -226,7 +226,7 @@ async def rps(ctx, choice: str = "scissors"):
         color=color
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
     if result == f"{ctx.author.mention} wins!":
         print(f"{ctx.author} wins! {ctx.author}'s {userchoice} vs {bot.user}'s {botchoice}")
@@ -236,6 +236,13 @@ async def rps(ctx, choice: str = "scissors"):
         print(f"{ctx.author} tied against {bot.user} in RPS")
     else:
         print(f'ERROR: Error in {ctx.message.content}! Executed by {ctx.author} ({ctx.author.id}) at {get_timenow()}')
+
+@bot.command(description="The wisdom of the eight ball upon you", aliases=["8ball"])
+async def eightball(ctx):
+    eightballanswers = ["yes", "no", "why not", "absolutely", "absolutely not", "fuck no", "hell yeah", "without a doubt", "i'm not too sure", "i don't know", "the answer lies in the question itself", "the answer can be found in your soul", "do what your heart desires", "whatever you feel like"]
+    eigthballchoice = secrets.choice(eightballanswers)
+    await ctx.reply(f"The 8-ball says: {eigthballchoice}", mention_author=True)
+    printlog(ctx)
 
 # --- INFO COMMANDS ---
 
@@ -253,10 +260,10 @@ async def help(ctx):
             inline=False
         )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
 
-@bot.command(description="Show the bot's latency")
+@bot.command(description="Show the bot's latency", aliases=["latency", "lag", "ms"])
 async def ping(ctx):
     latency = round(bot.latency * 1000)
     embed = discord.Embed(
@@ -264,7 +271,7 @@ async def ping(ctx):
         description=f"Latency: {latency} ms",
         color=discord.Color.gold()
     )
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
     print(f'Reported Latency: {latency}')
 
@@ -277,17 +284,17 @@ async def uptime(ctx):
         color=discord.Color.gold()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
     print(f'Bot Uptime: {uptime_str}')
 
 @bot.command(description="General info about the bot")
 async def botinfo(ctx):
     # You can expand this with more info if you want
-    await ctx.send("Command still in the works, so no info for you yet")
+    await ctx.reply("Command still in the works, so no info for you yet", mention_author=True)
     printlog(ctx)
 
-@bot.command(description="Get info about a UserID")
+@bot.command(description="Get info about a UserID", aliases=["user", "checkuser"])
 async def userinfo(ctx, userid: int = 1267637358942224516):
     user = await bot.fetch_user(userid)
     member = ctx.guild.get_member(userid) if ctx.guild else None
@@ -321,7 +328,7 @@ async def userinfo(ctx, userid: int = 1267637358942224516):
     if hasattr(user, "banner") and user.banner:
         embed.set_image(url=user.banner.url)
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
 
 @bot.command(description="Get info about the current server")
@@ -365,12 +372,14 @@ async def serverinfo(ctx):
         if ctx.author.avatar:
             embed.set_thumbnail(url=ctx.author.avatar.url)
 
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
     printlog(ctx)
+
+# --- MODERATION COMMANDS
 
 # --- ADMIN COMMANDS ---
 
-@bot.command(description="Shuts down the bot (dotz only)")
+@bot.command(description="Shuts down the bot (dotz only)", hidden=True, aliases=["die", "kys"])
 @commands.is_owner()
 async def shutdown(ctx):
     timeatshutdown = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -387,7 +396,7 @@ async def shutdown(ctx):
     print(f'Time is {timeatshutdown}')
     await bot.close()
 
-@bot.command(description="List all servers the bot is in (dotz only)")
+@bot.command(description="List all servers the bot is in (dotz only)", hidden=True, aliases=["servers"])
 @commands.is_owner()
 async def serverlist(ctx):
     guilds = bot.guilds
@@ -402,6 +411,6 @@ async def serverlist(ctx):
             value=f"ID: {guild.id} | Members: {guild.member_count}",
             inline=False
         )
-    await ctx.send(embed=embed)
+    await ctx.reply(embed=embed, mention_author=True)
 
 bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
