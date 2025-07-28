@@ -1,13 +1,13 @@
 # Setup
+import logging
+import random
 import os
+from datetime import datetime
+from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-import logging
-from datetime import datetime
-import random
-from dotenv import load_dotenv
 
-print(f'bot.py executed at ', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+print('bot.py executed at ', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 def get_timenow():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -46,7 +46,7 @@ bot_start_time = datetime.utcnow()
 @bot.event
 async def on_ready():
     startuptime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f'Time and date is ', startuptime)
+    print('Time and date is ', startuptime)
     print(f'{bot.user} is ready and active!')
     embed = discord.Embed(
         title="dotzbot is online",
@@ -146,7 +146,7 @@ async def meme(ctx):
     if random_file:
         print(f'{ctx.author} got the meme {filenaming}')
     else:
-        print(f'ERROR: No meme found in the memefolder!') 
+        print('ERROR: No meme found in the memefolder!') 
 
 @bot.command(description="Highest card wins")
 async def highcard(ctx):
@@ -271,7 +271,7 @@ async def userinfo(ctx, userid: int = 1267637358942224516):
         description = ""
 
     embed = discord.Embed(
-        title=f"User Information",
+        title="User Information",
         description=description,
         color=discord.Color.green()
     )
@@ -369,7 +369,7 @@ async def uptime(ctx):
     uptime_str = get_uptime()
     embed = discord.Embed(
         title="Uptime",
-        description=f"The bot has been running for: **{uptime_str}**",
+        description=f"The bot has been running for: {uptime_str}",
         color=discord.Color.gold()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
@@ -392,9 +392,16 @@ async def botinfo(ctx):
 @bot.command(description="Shuts down the bot (owner only)")
 @commands.is_owner()
 async def shutdown(ctx):
-    await ctx.send("Shutting down...")
+    timeatshutdown = get_timenow()
+    embed = discord.Embed(
+        title="dotzbot is offline",
+        description=timeatshutdown,
+        color= discord.Color.red()
+    )
+    embed.add_field(name="", value=f"Uptime: {get_uptime()}")
+    dotzbotchannel = bot.get_channel(1399359500049190912)
+    await dotzbotchannel.send(embed=embed)
     printlog(ctx)
-    print(f'CTRL+C Detected, shutting down.')
     print(f'Time is {get_timenow()}')
     print(f'Bot uptime at shutdown: {get_uptime()}')
     await bot.close()
