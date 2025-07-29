@@ -30,10 +30,11 @@ def get_cpu_temp() -> float:
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             return int(f.read()) / 1000.0
-    except Exception:
+    except (FileNotFoundError, ValueError, OSError):
         return -1.0  # Not available
 
 # --- Logging Setup ---
+
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -43,6 +44,7 @@ def get_daily_logfile(log_type: str) -> str:
     today = datetime.now().strftime("%d_%m_%Y")
     log_filename = f"{log_type}-{today}.log"
     return os.path.join(LOG_DIR, log_filename)
+
 
 usage_logfile = get_daily_logfile("usage")
 error_logfile = get_daily_logfile("error")
@@ -108,8 +110,6 @@ def log_error(ctx, error):
 def get_random_file(folder_path) -> str:
     """Returns a random file."""
     files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-    if not files:
-        return None
     return os.path.join(folder_path, secrets.choice(files))
 
 
@@ -207,8 +207,8 @@ async def on_command_error(ctx, error):
     )
     try:
         await ctx.reply(embed=embed, mention_author=True)
-    except Exception:
-        pass
+    except Exception as e:
+        error_logger.error(f"Failed to send error embed in on_command_error: {repr(e)}")
 
 # --- FUN COMMANDS ---
 
@@ -456,7 +456,7 @@ async def ping(ctx):
 async def uptime(ctx):
     uptime_str = get_uptime()
     embed = discord.Embed(
-        title="Uptime",
+        title="dotzbot's Uptime",
         description=f"The bot has been running for: {uptime_str}",
         color=discord.Color.gold()
     )
