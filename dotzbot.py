@@ -283,7 +283,9 @@ async def coinflip(ctx):
 @bot.command(description="Highest card wins")
 async def highcard(ctx):
     user_card = 1 + secrets.randbelow(13)
+
     if user_card == 1:
+        user_card = 14
         readable_user_card = "Ace"
     elif user_card == 11:
         readable_user_card = "Jack"
@@ -296,6 +298,7 @@ async def highcard(ctx):
 
     bot_card = 1 + secrets.randbelow(13)
     if bot_card == 1:
+        bot_card = 14
         readable_bot_card = "Ace"
     elif bot_card == 11:
         readable_bot_card = "Jack"
