@@ -280,7 +280,7 @@ async def coinflip(ctx):
     log_recent(ctx)
 
 
-@bot.command(description="Highest card wins")
+@bot.command(description="Highest card wins", aliases=["hc"])
 async def highcard(ctx):
     user_card = 1 + secrets.randbelow(13)
 
@@ -414,7 +414,7 @@ async def eightball(ctx):
 # --- INFO COMMANDS ---
 
 
-@bot.command(description="Shows this list!")
+@bot.command(description="Shows this list!", aliases=["h", "?"])
 async def help(ctx):
     is_owner = False
     try:
@@ -452,7 +452,7 @@ async def ping(ctx):
     log_recent(ctx)
 
 
-@bot.command(description="Show how long the bot has been running")
+@bot.command(description="Show how long the bot has been running", aliases=["lifetime", "upkeep"])
 async def uptime(ctx):
     uptime_str = get_uptime()
     embed = discord.Embed(
@@ -465,7 +465,7 @@ async def uptime(ctx):
     log_recent(ctx)
 
 
-@bot.command(description="General info about the bot")
+@bot.command(description="General info about the bot", aliases=["bot", "about"])
 async def botinfo(ctx):
     await ctx.reply("Command still in the works, so no info for you yet", mention_author=True)
     log_recent(ctx)
@@ -509,7 +509,7 @@ async def userinfo(ctx, userid: int = 1267637358942224516):
     log_recent(ctx)
 
 
-@bot.command(description="Get info about the current server")
+@bot.command(description="Get info about the current server", aliases=["server", "checkserver"])
 async def serverinfo(ctx):
     if ctx.guild:
         server_name = ctx.guild.name
@@ -560,7 +560,7 @@ async def serverinfo(ctx):
 # --- ADMIN COMMANDS ---
 
 
-@bot.command(description="Shuts down the bot (dotz only)", hidden=True, aliases=["die", "kys"])
+@bot.command(description="Shuts down the bot (dotz only)", hidden=True, aliases=["die", "kys", "fuckingdie", "de-exist"])
 @commands.is_owner()
 async def shutdown(ctx):
     time_at_shutdown = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
