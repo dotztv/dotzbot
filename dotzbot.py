@@ -38,19 +38,14 @@ def get_cpu_temp() -> float:
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
-def get_next_session_logfile(log_type: str) -> str:
-    """Returns a log file path with incremented session number for today."""
+def get_daily_logfile(log_type: str) -> str:
+    """Returns a log file path for today (no session number)."""
     today = datetime.now().strftime("%d_%m_%Y")
-    session = 1
-    while True:
-        log_filename = f"{log_type}-{today}-{session}.log"
-        log_path = os.path.join(LOG_DIR, log_filename)
-        if not os.path.exists(log_path):
-            return log_path
-        session += 1
+    log_filename = f"{log_type}-{today}.log"
+    return os.path.join(LOG_DIR, log_filename)
 
-usage_logfile = get_next_session_logfile("usage")
-error_logfile = get_next_session_logfile("error")
+usage_logfile = get_daily_logfile("usage")
+error_logfile = get_daily_logfile("error")
 
 usage_handler = logging.FileHandler(filename=usage_logfile, encoding="utf-8", mode="a")
 error_handler = logging.FileHandler(filename=error_logfile, encoding="utf-8", mode="a")
@@ -138,14 +133,11 @@ async def stats_logger():
         mem = psutil.virtual_memory()
         cpu_temp = get_cpu_temp()
         stats_message = (
-            "Stats: Uptime: %s | Time: %s | Commands (last 30m): %d | Commands (session): %d | "
-            "Unique users (last 30m): %d | Unique users (session): %d | Errors (last 30m): %d | Errors (session): %d | Guilds: %d | "
-            "CPU: %.1f%% | Mem: %.1f%% | CPU Temp: %.1f°C"
-        ) % (
-            uptime, now, COMMAND_USES_LAST_30, COMMAND_USES_SESSION,
-            len(UNIQUE_USERS_LAST_30), len(UNIQUE_USERS_SESSION),
-            ERRORS_LAST_30, ERRORS_SESSION, len(bot.guilds),
-            cpu_percent, mem.percent, cpu_temp
+            f"Stats:\n"
+            f"  Time: {now} | Uptime: {uptime} | Commands (last 30m): {COMMAND_USES_LAST_30} | Commands (session): {COMMAND_USES_SESSION}\n"
+            f"  Guilds: {len(bot.guilds)} | Unique users (last 30m): {len(UNIQUE_USERS_LAST_30)} | Unique users (session): {len(UNIQUE_USERS_SESSION)}\n"
+            f"  Errors (last 30m): {ERRORS_LAST_30} | Errors (session): {ERRORS_SESSION}\n"
+            f"  CPU: {cpu_percent:.1f}% | Mem: {mem.percent:.1f}% | CPU Temp: {cpu_temp:.1f}°C"
         )
         usage_logger.info(stats_message)
         print(stats_message)  # Print stats to console
@@ -172,10 +164,12 @@ async def on_command(ctx):
 
 @bot.event
 async def on_guild_join(guild):
-    usage_logger.info(
-        "Joined new guild: %s (ID: %d) | Owner: %s (ID: %d) | Member count: %d",
-        guild.name, guild.id, guild.owner, guild.owner_id, guild.member_count
+    log_message = (
+        f"Joined new guild: {guild.name} (ID: {guild.id}) | "
+        f"Owner: {guild.owner} (ID: {guild.owner_id}) | Member count: {guild.member_count}"
     )
+    usage_logger.info(log_message)
+    print(log_message)  # Print joined guild info to console
 
 
 @bot.event
