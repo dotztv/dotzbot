@@ -208,7 +208,7 @@ async def on_command_error(ctx, error):
     try:
         await ctx.reply(embed=embed, mention_author=True)
     except Exception as e:
-        error_logger.error(f"Failed to send error embed in on_command_error: {repr(e)}")
+        error_logger.error("Failed to send error embed in on_command_error: %s", repr(e))
 
 # --- FUN COMMANDS ---
 
@@ -311,7 +311,7 @@ async def highcard(ctx):
         winner = "bot"
     else:
         winner = "tie"
-    
+
     if winner == "user":
         embeddesc = f"{ctx.author.mention} won with a {readable_user_card} against {bot.user.mention}'s {readable_bot_card}"
         embedcolor = discord.Color.green()
