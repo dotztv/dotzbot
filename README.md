@@ -5,7 +5,7 @@
 [![wakatime](https://wakatime.com/badge/github/dotztv/dotzbot.svg)](https://wakatime.com/badge/github/dotztv/dotzbot)  
 
 it's a simple discordpy bot im making as a learning project, also cause i was insanely bored  
-i'm not going to lie, i did use a bit of github copilot for this. but that's because i didnt know anything and i didnt feel like reading docs.  
+i'm not going to lie, i did use a good bit of github copilot for this.
 
 Entire TODO put into trello.com.  
 > <https://trello.com/b/uNPHRG3L/dotzbot>  
