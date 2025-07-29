@@ -293,8 +293,6 @@ async def highcard(ctx):
         readable_user_card = "Queen"
     elif user_card == 13:
         readable_user_card = "King"
-    else:
-        readable_user_card = str(user_card)
 
     bot_card = 1 + secrets.randbelow(13)
     if bot_card == 1:
@@ -306,8 +304,6 @@ async def highcard(ctx):
         readable_bot_card = "Queen"
     elif bot_card == 13:
         readable_bot_card = "King"
-    else:
-        readable_bot_card = str(bot_card)
 
     if user_card > bot_card:
         winner = "user"
@@ -315,24 +311,22 @@ async def highcard(ctx):
         winner = "bot"
     else:
         winner = "tie"
+    
     if winner == "user":
-        embed = discord.Embed(
-            title="High Card Result",
-            description=f"{ctx.author.mention} won with a {readable_user_card} against {bot.user.mention}'s {readable_bot_card}",
-            color=discord.Color.green()
-        )
+        embeddesc = f"{ctx.author.mention} won with a {readable_user_card} against {bot.user.mention}'s {readable_bot_card}"
+        embedcolor = discord.Color.green()
     elif winner == "bot":
-        embed = discord.Embed(
-            title="High Card Result",
-            description=f"{bot.user.mention} won with a {readable_bot_card} against {ctx.author.mention}'s {readable_user_card}",
-            color=discord.Color.red()
-        )
+        embeddesc = f"{bot.user.mention} won with a {readable_bot_card} against {ctx.author.mention}'s {readable_user_card}"
+        embedcolor = discord.Color.red()
     else:
-        embed = discord.Embed(
-            title="High Card Result",
-            description=f"It's a tie! Both drew a {readable_user_card}",
-            color=discord.Color.yellow()
-        )
+        embeddesc = f"It's a tie! Both drew a {readable_user_card}"
+        embedcolor = discord.Color.yellow()
+
+    embed = discord.Embed(
+        title="High Card Result",
+        description=embeddesc,
+        color=embedcolor
+    )
     await ctx.reply(embed=embed, mention_author=True)
     log_recent(ctx)
 
