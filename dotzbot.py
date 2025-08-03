@@ -1,110 +1,19 @@
 # Setup
-
-import logging
 import os
 from datetime import datetime
 import asyncio
-import psutil
 
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 import secrets
 
-# --- Command Usage Tracking ---
-COMMAND_USES_SESSION = 0
-COMMAND_USES_LAST_30 = 0
-UNIQUE_USERS_SESSION = set()
-UNIQUE_USERS_LAST_30 = set()
-ERRORS_LAST_30 = 0
-ERRORS_SESSION = 0
-
-def increment_command_usage(ctx):
-    global COMMAND_USES_SESSION, COMMAND_USES_LAST_30
-    COMMAND_USES_SESSION += 1
-    COMMAND_USES_LAST_30 += 1
-    UNIQUE_USERS_SESSION.add(ctx.author.id)
-    UNIQUE_USERS_LAST_30.add(ctx.author.id)
-
-def get_cpu_temp() -> float:
-    try:
-        with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
-            return int(f.read()) / 1000.0
-    except (FileNotFoundError, ValueError, OSError):
-        return -1.0  # Not available
-
-# --- Logging Setup ---
-
-
-LOG_DIR = "logs"
-os.makedirs(LOG_DIR, exist_ok=True)
-
-def get_daily_logfile(log_type: str) -> str:
-    """Returns a log file path for today (no session number)."""
-    today = datetime.now().strftime("%d_%m_%Y")
-    log_filename = f"{log_type}-{today}.log"
-    return os.path.join(LOG_DIR, log_filename)
-
-
-usage_logfile = get_daily_logfile("usage")
-error_logfile = get_daily_logfile("error")
-
-usage_handler = logging.FileHandler(filename=usage_logfile, encoding="utf-8", mode="a")
-error_handler = logging.FileHandler(filename=error_logfile, encoding="utf-8", mode="a")
-
-usage_handler.setLevel(logging.INFO)
-error_handler.setLevel(logging.ERROR)
-
-formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-usage_handler.setFormatter(formatter)
-error_handler.setFormatter(formatter)
-
-# Usage logger for command usage
-usage_logger = logging.getLogger("usage_logger")
-usage_logger.setLevel(logging.INFO)
-usage_logger.addHandler(usage_handler)
-usage_logger.propagate = False
-
-# Error logger for errors
-error_logger = logging.getLogger("error_logger")
-error_logger.setLevel(logging.ERROR)
-error_logger.addHandler(error_handler)
-error_logger.propagate = False
-
-usage_logger.info("bot.py executed at %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+# Functions
 
 
 def get_time_now() -> str:
     """Returns current (local) time."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-def log_recent(ctx):
-    """Log command usage to usage.log."""
-    user = f"{ctx.author} ({ctx.author.id})"
-    command = ctx.message.content
-    location = ctx.guild.name if ctx.guild else "DMs"
-    channel = f", {ctx.channel.name}" if ctx.guild else ""
-    usage_logger.info(
-        '%s used: "%s" in %s%s at %s',
-        user, command, location, channel, get_time_now()
-    )
-
-
-def log_error(ctx, error):
-    """Log errors to error.log with context and print to console."""
-    global ERRORS_LAST_30, ERRORS_SESSION
-    ERRORS_LAST_30 += 1
-    ERRORS_SESSION += 1
-    user = f"{ctx.author} ({ctx.author.id})" if hasattr(ctx, "author") else "Unknown"
-    command = ctx.message.content if hasattr(ctx, "message") else "Unknown"
-    location = ctx.guild.name if hasattr(ctx, "guild") and ctx.guild else "DMs"
-    channel = f", {ctx.channel.name}" if hasattr(ctx, "guild") and ctx.guild else ""
-    error_message = (
-        f'Error for {user} using "{command}" in {location}{channel} at {get_time_now()}\nError: {repr(error)}'
-    )
-    error_logger.error(error_message)
-    print(error_message)  # Print errors to console
 
 
 def get_random_file(folder_path) -> str:
@@ -123,30 +32,6 @@ def get_uptime() -> str:
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
 
-async def stats_logger():
-    await bot.wait_until_ready()
-    global COMMAND_USES_LAST_30, UNIQUE_USERS_LAST_30, ERRORS_LAST_30
-    while not bot.is_closed():
-        uptime = get_uptime()
-        now = get_time_now()
-        cpu_percent = psutil.cpu_percent(interval=1)
-        mem = psutil.virtual_memory()
-        cpu_temp = get_cpu_temp()
-        stats_message = (
-            f"Stats:\n"
-            f"  Time: {now} | Uptime: {uptime} | Commands (last 30m): {COMMAND_USES_LAST_30} | Commands (session): {COMMAND_USES_SESSION}\n"
-            f"  Guilds: {len(bot.guilds)} | Unique users (last 30m): {len(UNIQUE_USERS_LAST_30)} | Unique users (session): {len(UNIQUE_USERS_SESSION)}\n"
-            f"  Errors (last 30m): {ERRORS_LAST_30} | Errors (session): {ERRORS_SESSION}\n"
-            f"  CPU: {cpu_percent:.1f}% | Mem: {mem.percent:.1f}% | CPU Temp: {cpu_temp:.1f}°C"
-        )
-        usage_logger.info(stats_message)
-        print(stats_message)  # Print stats to console
-        # Reset 30-minute counters
-        COMMAND_USES_LAST_30 = 0
-        UNIQUE_USERS_LAST_30 = set()
-        ERRORS_LAST_30 = 0
-        await asyncio.sleep(1800)  # 30 minutes
-
 # --- Discord Bot Setup ---
 
 load_dotenv()
@@ -159,35 +44,16 @@ bot.activity_set = False
 
 
 @bot.event
-async def on_command(ctx):
-    increment_command_usage(ctx)
-
-@bot.event
-async def on_guild_join(guild):
-    log_message = (
-        f"Joined new guild: {guild.name} (ID: {guild.id}) | "
-        f"Owner: {guild.owner} (ID: {guild.owner_id}) | Member count: {guild.member_count}"
-    )
-    usage_logger.info(log_message)
-    print(log_message)  # Print joined guild info to console
-
-
-@bot.event
 async def on_ready():
     if not bot.activity_set:
         activity = discord.Game(name="with your electric box :3")
         await bot.change_presence(activity=activity)
         bot.activity_set = True
-        # Start stats_logger only once
-        if not hasattr(bot, "stats_task"):
-            bot.stats_task = asyncio.create_task(stats_logger())
 
-    startuptime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    usage_logger.info("Time and date is %s", startuptime)
-    usage_logger.info("%s is ready and active!", bot.user)
+    startup_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     embed = discord.Embed(
         title="dotzbot is online",
-        description=startuptime,
+        description=startup_time,
         color=discord.Color.green()
     )
     dotzbot_channel = bot.get_channel(1399359500049190912)
@@ -198,17 +64,12 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(ctx, error):
-    log_error(ctx, error)
-
     embed = discord.Embed(
         title="An error occurred",
         description=f"{type(error).__name__}: {error}",
         color=discord.Color.red()
     )
-    try:
-        await ctx.reply(embed=embed, mention_author=True)
-    except Exception as e:
-        error_logger.error("Failed to send error embed in on_command_error: %s", repr(e))
+    await ctx.reply(embed=embed, mention_author=True)
 
 # --- FUN COMMANDS ---
 
@@ -239,7 +100,6 @@ async def meme(ctx):
         embed.add_field(name="", value=f"{num_files} Files")
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Roll an X sided dice", aliases=["dice", "dice_roll"])
@@ -252,7 +112,7 @@ async def roll(ctx, dice_sides: int = 100):
         )
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, mention_author=True)
-        log_recent(ctx)
+
         return
 
     dice_roll = 1 + secrets.randbelow(dice_sides)
@@ -263,7 +123,6 @@ async def roll(ctx, dice_sides: int = 100):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Flip a coin, Heads or tails?", aliases=["cf", "coin", "flip"])
@@ -277,7 +136,6 @@ async def coinflip(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Highest card wins", aliases=["hc"])
@@ -328,7 +186,6 @@ async def highcard(ctx):
         color=embedcolor
     )
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Play Rock Paper Scissors, default choice is scissors")
@@ -367,7 +224,6 @@ async def rps(ctx, choice: str = "scissors"):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="The wisdom of the eight ball upon you", aliases=["8ball", "8b"])
@@ -402,7 +258,6 @@ async def eightball(ctx):
     )
 
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 # --- INFO COMMANDS ---
@@ -431,7 +286,6 @@ async def help(ctx):
         )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Show the bot's latency", aliases=["latency", "lag", "ms"])
@@ -443,7 +297,6 @@ async def ping(ctx):
         color=discord.Color.gold()
     )
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Show how long the bot has been running", aliases=["lifetime", "upkeep"])
@@ -456,13 +309,11 @@ async def uptime(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="General info about the bot", aliases=["bot", "about"])
 async def botinfo(ctx):
     await ctx.reply("Command still in the works, so no info for you yet", mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Get info about a UserID", aliases=["user", "checkuser"])
@@ -500,7 +351,6 @@ async def userinfo(ctx, userid: int = 1267637358942224516):
         embed.set_image(url=user.banner.url)
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 @bot.command(description="Get info about the current server", aliases=["server", "checkserver"])
@@ -545,7 +395,6 @@ async def serverinfo(ctx):
             embed.set_thumbnail(url=ctx.author.avatar.url)
 
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 
 # --- MODERATION COMMANDS ---
@@ -568,7 +417,6 @@ async def shutdown(ctx):
     emoji = "✅"
     await ctx.message.add_reaction(emoji)
     await dotzbot_channel.send(embed=embed)
-    log_recent(ctx)
     await bot.close()
 
 
@@ -588,6 +436,5 @@ async def serverlist(ctx):
             inline=False
         )
     await ctx.reply(embed=embed, mention_author=True)
-    log_recent(ctx)
 
 bot.run(TOKEN)
