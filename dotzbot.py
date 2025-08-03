@@ -58,7 +58,7 @@ async def on_ready():
 
     embed = discord.Embed(
         title="dotzbot is online",
-        description=BOT_START_TIME,
+        description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"), # Formats to a more readable version
         color=discord.Color.green()
     )
     dotzbot_channel = bot.get_channel(1399359500049190912) # Channel ID of my server's channel for the bot
