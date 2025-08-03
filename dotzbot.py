@@ -1,7 +1,7 @@
 # Setup
+import logging
 import os
 from datetime import datetime
-import asyncio
 
 from dotenv import load_dotenv
 import discord
@@ -34,6 +34,7 @@ def get_uptime() -> str:
 
 # --- Discord Bot Setup ---
 
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.all()
@@ -268,7 +269,7 @@ async def help(ctx):
     is_owner = False
     try:
         is_owner = await bot.is_owner(ctx.author)
-    except Exception:
+    except (AttributeError, discord.HTTPException, discord.Forbidden, discord.NotFound):
         pass
 
     embed = discord.Embed(
@@ -437,4 +438,4 @@ async def serverlist(ctx):
         )
     await ctx.reply(embed=embed, mention_author=True)
 
-bot.run(TOKEN)
+bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
