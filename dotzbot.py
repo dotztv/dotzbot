@@ -416,13 +416,12 @@ async def shutdown(ctx):
 @bot.command(description="List all servers the bot is in (dotz only)", hidden=True, aliases=["servers"])
 @commands.is_owner()
 async def serverlist(ctx):
-    guild_list = bot.guilds
     embed = discord.Embed(
         title="Server List",
-        description=f"The bot is in {len(guild_list)} servers:",
+        description=f"The bot is in {len(bot.guilds)} servers:",
         color=discord.Color.gold()
     )
-    for guild in guild_list: # Adds each guild as it's own field
+    for guild in bot.guilds: # Adds each guild as it's own field
         embed.add_field(
             name=guild.name,
             value=f"ID: {guild.id} | Members: {guild.member_count}",
