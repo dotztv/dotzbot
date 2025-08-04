@@ -31,18 +31,16 @@ def get_uptime() -> str:
     minutes, seconds = divmod(remainder, 60)
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
-
 # --- Setup ---
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN") # Gets the discord token from the .env file
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w') # Sets up logging
 intents = discord.Intents.all() # Gives it all intents, TODO: Make it only have what it needs, same with permissions
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None) # Sets up bot with discord.ext command prefix, all intents and removes default help command
-
-
 bot.activity_set = False
 
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w') # Sets up logging
+logging.basicConfig(format=f"{get_time_now()} / %(levelname)s = %(message)s", level=logging.INFO)
 
 # --- Bot Events ---
 
@@ -63,6 +61,7 @@ async def on_ready():
     )
     dotzbot_channel = bot.get_channel(1399359500049190912) # Channel ID of my server's channel for the bot
     await dotzbot_channel.send(embed=embed) # Sends it to the specified channel
+    logging.info(f"Logged in as {bot.user}")
 
 
 @bot.event # Vibe coded error handler
@@ -73,6 +72,7 @@ async def on_command_error(ctx, error):
         color=discord.Color.red()
     )
     await ctx.reply(embed=embed, mention_author=True)
+    logging.error(f"{error}")
 
 @bot.event
 async def on_guild_join(guild):
@@ -89,6 +89,7 @@ async def on_guild_join(guild):
         for channel in guild.text_channels:
             if channel.permissions_for(guild.me).send_messages:
                 await channel.send("Sorry, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
+                logging.info(f"Left disallowed server, {guild.name} ({guild.id})")
         guild.leave()
 
 # --- FUN COMMANDS ---
@@ -111,6 +112,7 @@ async def meme(ctx):
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
     await ctx.reply(embed=embed, file=discord.File(random_file), mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) got meme {file_name} out of {num_files} files")
 
 
 @bot.command(description="Roll an X sided dice", aliases=["dice", "dice_roll", "diceroll", "rolldice", "roll_dice"])
@@ -123,6 +125,7 @@ async def roll(ctx, dice_sides: int = 100):
         )
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, mention_author=True)
+        logging.info(f"{ctx.author} ({ctx.author.id}) just tried to roll a {dice_sides}-sided dice")
 
         return # to not continue code
 
@@ -134,6 +137,7 @@ async def roll(ctx, dice_sides: int = 100):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) rolled a {dice_sides}-sided dice and got {dice_roll}")
 
 
 @bot.command(description="Flip a coin, Heads or tails?", aliases=["cf", "coin", "flip", "flipacoin"])
@@ -147,6 +151,7 @@ async def coinflip(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author}'s ({ctx.author.id}) coin landed on {coin}")
 
 
 @bot.command(description="Highest card wins", aliases=["hc"])
@@ -162,6 +167,8 @@ async def highcard(ctx):
         readable_user_card = "Queen"
     elif user_card == 13:
         readable_user_card = "King"
+    else:
+        readable_user_card = user_card
 
     bot_card = 1 + secrets.randbelow(13)
     if bot_card == 1:
@@ -173,16 +180,21 @@ async def highcard(ctx):
         readable_bot_card = "Queen"
     elif bot_card == 13:
         readable_bot_card = "King"
+    else:
+        readable_bot_card = bot_card
 
     if user_card > bot_card: # If user wins
         embeddesc = f"{ctx.author.mention} won with a {readable_user_card} against {bot.user.mention}'s {readable_bot_card}"
         embedcolor = discord.Color.green()
+        logging.info(f"{ctx.author} ({ctx.author.id}) won with a {readable_user_card} against {bot.user}'s {readable_bot_card}")
     elif bot_card > user_card: # or bot wins
         embeddesc = f"{bot.user.mention} won with a {readable_bot_card} against {ctx.author.mention}'s {readable_user_card}"
         embedcolor = discord.Color.red()
+        logging.info(f"{bot.user} won with a {readable_bot_card} against {ctx.author}'s ({ctx.author.id}) {readable_user_card}")
     else: # or it's a tie
         embeddesc = f"It's a tie! Both drew a {readable_user_card}"
         embedcolor = discord.Color.yellow()
+        logging.info(f"{ctx.author} ({ctx.author.id}) tied with {bot.user} with {readable_user_card}")
 
 
     embed = discord.Embed(
@@ -190,12 +202,31 @@ async def highcard(ctx):
         description=embeddesc,
         color=embedcolor
     )
+    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
 
-
 @bot.command(description="Play Rock Paper Scissors, default choice is scissors")
-async def rps(ctx, choice: str = "scissors"):
+async def rps(ctx, choice: str = None):
     rps_choices = ["rock", "paper", "scissors"]
+    embed = discord.Embed(
+        title="$rps wrong usage",
+        description="You're supposed to say either rock, paper or scissors",
+        color=discord.Color.red()
+        )
+    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+    
+    if choice is None:
+        await ctx.reply(embed=embed, mention_author=True)
+        logging.info(f"{ctx.author} ({ctx.author.id}) failed to provide either rock, paper or scissors (None)")
+        return
+    else:
+        choice = choice.lower()
+        if choice not in rps_choices:
+            await ctx.reply(embed=embed, mention_author=True)
+            logging.info(f"{ctx.author} ({ctx.author.id}) failed to provide either rock, paper or scissors ({choice})")
+            return
+
+    
     user_choice = choice.lower() # make the input/argument lowercase
     bot_choice = secrets.choice(rps_choices)
     color = discord.Color.gold()
@@ -203,19 +234,19 @@ async def rps(ctx, choice: str = "scissors"):
     if user_choice == bot_choice:
         result = "It's a tie!"
         color = discord.Color.gold()
+        logging.info(f"{ctx.author} ({ctx.author.id}) tied to {bot.user} with {user_choice}")
     elif (user_choice == "rock" and bot_choice == "scissors") or \
          (user_choice == "scissors" and bot_choice == "paper") or \
          (user_choice == "paper" and bot_choice == "rock"):
         result = f"{ctx.author.mention} wins!" # user wins
         color = discord.Color.green()
+        logging.info(f"{ctx.author} ({ctx.author.id}) wins with {user_choice} against {bot.user}'s {bot_choice}")
     elif (bot_choice == "rock" and user_choice == "scissors") or \
          (bot_choice == "scissors" and user_choice == "paper") or \
          (bot_choice == "paper" and user_choice == "rock"):
         result = f"{bot.user.mention} wins!" # bot wins
         color = discord.Color.red()
-    else:
-        result = "Invalid choice! Please choose rock, paper, or scissors."
-        color = discord.Color.red()
+        logging.info(f"{bot.user} wins with {bot_choice} against {ctx.author}'s ({ctx.author.id}) {user_choice}")
 
     embed = discord.Embed(
         title="Rock Paper Scissors",
@@ -262,8 +293,10 @@ async def eightball(ctx):
         description=f"The 8 ball says: {eight_ball_real_choice}",
         color=embed_color
     )
+    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}")
 
 
 # --- INFO COMMANDS ---
@@ -292,6 +325,7 @@ async def help(ctx):
         )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used the $help command")
 
 
 @bot.command(description="Show the bot's latency", aliases=["latency", "lag", "ms"])
@@ -302,7 +336,9 @@ async def ping(ctx):
         description=f"Latency: {latency} ms",
         color=discord.Color.gold()
     )
+    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used the $ping command ({latency}ms)")
 
 
 @bot.command(description="Show how long the bot has been running", aliases=["lifetime", "upkeep"])
@@ -315,17 +351,19 @@ async def uptime(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used the $uptime command ({uptime_str})")
 
 
 @bot.command(description="General info about the bot", aliases=["bot", "about"])
 async def botinfo(ctx):
     await ctx.reply("Command still in the works, so no info for you yet", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used the $botinfo command")
 
 
 @bot.command(description="Get info about a User", aliases=["user", "checkuser"])
 async def userinfo(ctx, user_id: str = None):
     embed = discord.Embed(
-        title="$userinfo",
+        title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
         color=discord.Color.red()
     )
@@ -340,15 +378,18 @@ async def userinfo(ctx, user_id: str = None):
                 placeholder_variable = int(user_id)
             except ValueError:
                 await ctx.reply(embed=embed, mention_author=True)
+                logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
                 return
     else:
         await ctx.reply(embed=embed, mention_author=True)
+        logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
         return
 
     try:
         user_id = int(user_id)
     except ValueError:
         await ctx.reply("Some error happened, contact dotz", mention_author=True)
+        logging.error(f"{ctx.author} ({ctx.author.id}) somehow got ValueError in $userinfo! ({ctx.message.content})")
         return
 
     try:
@@ -357,6 +398,7 @@ async def userinfo(ctx, user_id: str = None):
         target_user = member_obj if member_obj else user
     except (ValueError, discord.NotFound):
         await ctx.reply("User not found.", mention_author=True)
+        logging.error(f"{ctx.author} ({ctx.author.id}) provided a user we couldn't fetch? ({ctx.message.content})")
         return
 
     if user_id == 550378971426979856: # dotz
@@ -389,6 +431,7 @@ async def userinfo(ctx, user_id: str = None):
         embed.set_image(url=user.banner.url) # Sets user's banner (Nitro Feature) as image (big, underneath)
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used {ctx.message.content}")
 
 
 @bot.command(description="Get info about the current server", aliases=["server", "checkserver"])
@@ -434,6 +477,7 @@ async def serverinfo(ctx):
             embed.set_thumbnail(url=ctx.author.avatar.url) # Sets user's pfp as thumbnail (small, top right)
 
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used the $serverinfo command in {ctx.guild}")
 
 
 # --- MODERATION COMMANDS ---
@@ -457,6 +501,8 @@ async def shutdown(ctx):
     emoji = "✅" # defines emoji to react with
     await ctx.message.add_reaction(emoji)
     await dotzbot_channel.send(embed=embed)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used $shutdown command!")
+    logging.info(f"Bot was up for {get_uptime()}")
     await bot.close()
 
 
@@ -475,5 +521,6 @@ async def serverlist(ctx):
             inline=False
         )
     await ctx.reply(embed=embed, mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) used $serverlist command ({len(bot.guilds)} servers)")
 
-bot.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
+bot.run(TOKEN, log_handler=handler, log_level=logging.INFO)
