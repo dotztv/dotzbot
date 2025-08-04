@@ -74,6 +74,22 @@ async def on_command_error(ctx, error):
     )
     await ctx.reply(embed=embed, mention_author=True)
 
+@bot.event
+async def on_guild_join(guild):
+    allowedservers = [1303080585216131082, 1345174170572554362, 907012194175176714]
+    """Allowed Servers:
+    dotz's corner
+    gamers inc. (reincarnated)
+    .PlaySpace
+    """
+
+    if guild.id in allowedservers:
+        pass
+    else:
+        for channel in guild.text_channels:
+            if channel.permissions_for(guild.me).send_messages:
+                await channel.send("Sorry, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
+        guild.leave()
 
 # --- FUN COMMANDS ---
 
