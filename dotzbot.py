@@ -322,15 +322,38 @@ async def botinfo(ctx):
     await ctx.reply("Command still in the works, so no info for you yet", mention_author=True)
 
 
-@bot.command(description="Get info about a UserID", aliases=["user", "checkuser"])
-async def userinfo(ctx, userid: int = 1267637358942224516): # Defaults to dotzbot UserID
-    user = await bot.fetch_user(userid)
-    member_obj = ctx.guild.get_member(userid) if ctx.guild else None
-    target_user = member_obj if member_obj else user
+@bot.command(description="Get info about a User", aliases=["user", "checkuser"])
+async def userinfo(ctx, user_id: str = None):
+    if user_id is not None:
+        if user_id.startswith("<@") and user_id.endswith(">"):  # Checks for mention
+            user_id = user_id.replace("<@", "").replace("!", "").replace(">", "") # Removes mention casing
+        else:
+            try:
+                placeholder_variable = int(user_id)
+            except ValueError:
+                await ctx.reply("You're supposed to provide a user, by either a ping or their ID.", mention_author=True)
+                return
+    else:
+        await ctx.reply("You're supposed to provide a user, by either a ping or their ID.", mention_author=True)
+        return
 
-    if userid == 550378971426979856: # dotz
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        await ctx.reply("Some error happened, contact dotz", mention_author=True)
+        return
+
+    try:
+        user = await bot.fetch_user(user_id)
+        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None
+        target_user = member_obj if member_obj else user
+    except (ValueError, discord.NotFound):
+        await ctx.reply("User not found.", mention_author=True)
+        return
+
+    if user_id == 550378971426979856: # dotz
         description = "Hey, It's my creator!"
-    elif userid == 1267637358942224516: # dotzbot
+    elif user_id == 1267637358942224516: # dotzbot
         description = "Wait a minute, that's me!"
     else:
         description = ""
