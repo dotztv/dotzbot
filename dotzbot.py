@@ -324,6 +324,14 @@ async def botinfo(ctx):
 
 @bot.command(description="Get info about a User", aliases=["user", "checkuser"])
 async def userinfo(ctx, user_id: str = None):
+    embed = discord.Embed(
+        title="$userinfo",
+        description="You're supposed to provide a user with a ping or their ID",
+        color=discord.Color.red()
+    )
+    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+
+
     if user_id is not None:
         if user_id.startswith("<@") and user_id.endswith(">"):  # Checks for mention
             user_id = user_id.replace("<@", "").replace("!", "").replace(">", "") # Removes mention casing
@@ -331,10 +339,10 @@ async def userinfo(ctx, user_id: str = None):
             try:
                 placeholder_variable = int(user_id)
             except ValueError:
-                await ctx.reply("You're supposed to provide a user, by either a ping or their ID.", mention_author=True)
+                await ctx.reply(embed=embed, mention_author=True)
                 return
     else:
-        await ctx.reply("You're supposed to provide a user, by either a ping or their ID.", mention_author=True)
+        await ctx.reply(embed=embed, mention_author=True)
         return
 
     try:
