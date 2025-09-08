@@ -2,11 +2,12 @@
 import logging
 import os
 from datetime import datetime
+import secrets
+import aiohttp
 
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands
-import secrets
 
 # --- Functions ---
 
@@ -356,12 +357,20 @@ async def uptime(ctx):
 
 @bot.command(description="General info about the bot", aliases=["bot", "about"])
 async def botinfo(ctx):
-    await ctx.reply("Command still in the works, so no info for you yet", mention_author=True)
+    embed = discord.Embed(
+        title="About dotzbot",
+        description="dotzbot was made as a hobby, from a project of boredom",
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+    embed.add_field(name="Latest Commit", value="ABC")
+
+    await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $botinfo command")
 
 
 @bot.command(description="Get info about a User", aliases=["user", "checkuser"])
-async def userinfo(ctx, user_id: str = None):
+async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless provided
     embed = discord.Embed(
         title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
@@ -370,37 +379,38 @@ async def userinfo(ctx, user_id: str = None):
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
 
-    if user_id is not None:
-        if user_id.startswith("<@") and user_id.endswith(">"):  # Checks for mention
-            user_id = user_id.replace("<@", "").replace("!", "").replace(">", "") # Removes mention casing
+    if user_id is not None: # If it's literally anything, so a string (a ping) or an int (userID)
+        if user_id.startswith("<@") and user_id.endswith(">"):  # Ping Method
+            user_id = user_id.replace("<@", "").replace("!", "").replace(">", "") # Removes ping casing to get ID only
         else:
-            try:
-                placeholder_variable = int(user_id)
-            except ValueError:
+            try: # Other Method, assuming it's a UserID
+                placeholder_variable = int(user_id) # placeholder_variable cause if it's an actual variable then it'll crash for some reason
+            except ValueError: # If it's not a UserID but instead some failed ping or something, it won't work
                 await ctx.reply(embed=embed, mention_author=True)
                 logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
                 return
-    else:
+    elif user_id is None: # If there is no arg at all
         await ctx.reply(embed=embed, mention_author=True)
         logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
         return
 
     try:
-        user_id = int(user_id)
-    except ValueError:
-        await ctx.reply("Some error happened, contact dotz", mention_author=True)
+        user_id = int(user_id) # Makes user_id an integer so it can be used in fetch_user
+    except ValueError: # A "just in case" code
+        await ctx.reply("Some error happened, contact dotz", mention_author=True) 
         logging.error(f"{ctx.author} ({ctx.author.id}) somehow got ValueError in $userinfo! ({ctx.message.content})")
         return
 
     try:
         user = await bot.fetch_user(user_id)
-        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None
+        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None # gets member object if in a server -github copilot
         target_user = member_obj if member_obj else user
     except (ValueError, discord.NotFound):
         await ctx.reply("User not found.", mention_author=True)
         logging.error(f"{ctx.author} ({ctx.author.id}) provided a user we couldn't fetch? ({ctx.message.content})")
         return
 
+    # Special people
     if user_id == 550378971426979856: # dotz
         description = "Hey, It's my creator!"
     elif user_id == 1267637358942224516: # dotzbot
@@ -408,7 +418,7 @@ async def userinfo(ctx, user_id: str = None):
     else:
         description = ""
 
-    embed = discord.Embed(
+    embed = discord.Embed( # Modifies embed to have actual info and not an error
         title="User Information",
         description=description,
         color=discord.Color.green()
@@ -421,7 +431,7 @@ async def userinfo(ctx, user_id: str = None):
     if member_obj and member_obj.joined_at: # If run in a server
         embed.add_field(name="Joined Server", value=member_obj.joined_at.strftime("%Y-%m-%d %H:%M:%S"))
     if member_obj and member_obj.roles: # If run in a server, for some reason will still run even if user has no roles
-        embed.add_field(
+        embed.add_field( # todo, fix by reading documentation (i wont)
             name="Roles",
             value=", ".join([role.name for role in member_obj.roles if role.name != "@everyone"])
         )
@@ -436,11 +446,11 @@ async def userinfo(ctx, user_id: str = None):
 
 @bot.command(description="Get info about the current server", aliases=["server", "checkserver"])
 async def serverinfo(ctx):
-    if ctx.guild: # if run in a server
+    if ctx.guild: # if run in a server (True)
         server_name = ctx.guild.name
         embed_desc = ""
         embed_color = discord.Color.green()
-    else: # if not run a in a server, therefore DM
+    else: # if not run a in a server, therefore DM (False)
         server_name = "This is a DM"
         embed_desc = "But I'll try to give you some information anyways"
         embed_color = discord.Color.gold()
