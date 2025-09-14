@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands, tasks
 
+
 # --- Functions ---
 
 
@@ -32,7 +33,9 @@ def get_uptime() -> str:
     minutes, seconds = divmod(remainder, 60)
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
+
 # --- Setup ---
+
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN") # Gets the discord token from the .env file
@@ -42,7 +45,9 @@ bot = commands.Bot(command_prefix="$", intents=intents, help_command=None) # Set
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w') # Sets up logging
 logging.basicConfig(format=f"{get_time_now()} / %(levelname)s = %(message)s", level=logging.INFO)
 
+
 # --- Bot Events ---
+
 
 @bot.event
 async def on_ready():
@@ -90,7 +95,10 @@ async def on_guild_join(guild):
                 break
         await guild.leave()
 
+
 # --- TASKS ---
+
+
 @tasks.loop(seconds=120)
 async def random_activity():
     activity_type = ["playing", "watching", "streaming", "listening"]
@@ -98,19 +106,28 @@ async def random_activity():
 
     playing_activities = [
         "with your electric box",
-        "with the doll in my basement"
+        "with the doll in my basement",
+        "with dotz's sanity"
     ]
     
     watching_activies = [
-        "you"
+        "you",
+        "over everything you say",
+        "the drama"
     ]
 
     streaming_activies = [
-        "your webcam"
+        "your webcam",
+        "your browser history",
+        "the hidden camera in your room",
+        "your fridge"
     ]
 
     listening_activies = [
-        " the voices in my head"
+        "the voices in my head",
+        "the drama",
+        "the silence",
+        "how useless i am"
     ]
 
     if real_activity_type == "playing":
@@ -133,6 +150,7 @@ async def random_activity():
 async def before_loop():
     await bot.wait_until_ready()
     logging.info("Started random_activity")
+
 
 # --- FUN COMMANDS ---
 
@@ -339,6 +357,7 @@ async def eightball(ctx):
 
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}") 
+
 
 # --- INFO COMMANDS ---
 
