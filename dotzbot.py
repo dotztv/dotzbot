@@ -3,11 +3,11 @@ import logging
 import os
 from datetime import datetime
 import secrets
-import aiohttp
+from time import sleep
 
 from dotenv import load_dotenv
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 # --- Functions ---
 
@@ -38,7 +38,6 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN") # Gets the discord token from the .env file
 intents = discord.Intents.all() # Gives it all intents, TODO: Make it only have what it needs, same with permissions
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None) # Sets up bot with discord.ext command prefix, all intents and removes default help command
-bot.activity_set = False
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w') # Sets up logging
 logging.basicConfig(format=f"{get_time_now()} / %(levelname)s = %(message)s", level=logging.INFO)
@@ -47,11 +46,6 @@ logging.basicConfig(format=f"{get_time_now()} / %(levelname)s = %(message)s", le
 
 @bot.event
 async def on_ready():
-    if not bot.activity_set: # Makes it do it only once
-        activity = discord.Game(name="with your electric box :3") # Sets Activity to: Playing with your electric box :3
-        await bot.change_presence(activity=activity)
-        bot.activity_set = True
-
     global BOT_START_TIME # makes sure it's usable everywhere
     BOT_START_TIME = datetime.utcnow() # also used in get_uptime()
 
@@ -63,6 +57,7 @@ async def on_ready():
     dotzbot_channel = bot.get_channel(1399359500049190912) # Channel ID of my server's channel for the bot
     await dotzbot_channel.send(embed=embed) # Sends it to the specified channel
     logging.info(f"Logged in as {bot.user}")
+    random_activity.start()
 
 
 @bot.event # Vibe coded error handler
@@ -78,20 +73,66 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_guild_join(guild):
     allowedservers = [1303080585216131082, 1345174170572554362, 907012194175176714]
-    """Allowed Servers:
+    """Allowed Servers: (in order)
     dotz's corner
     gamers inc. (reincarnated)
     .PlaySpace
     """
+    owner = guild.owner or await bot.fetch_user(guild.owner_id)
 
     if guild.id in allowedservers:
         pass
     else:
         for channel in guild.text_channels:
             if channel.permissions_for(guild.me).send_messages:
-                await channel.send("Sorry, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
+                await channel.send(f"Sorry {owner.mention}, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
                 logging.info(f"Left disallowed server, {guild.name} ({guild.id})")
-        guild.leave()
+                break
+        await guild.leave()
+
+# --- TASKS ---
+@tasks.loop(seconds=120)
+async def random_activity():
+    activity_type = ["playing", "watching", "streaming", "listening"]
+    real_activity_type = secrets.choice(activity_type)
+
+    playing_activities = [
+        "with your electric box",
+        "with the doll in my basement"
+    ]
+    
+    watching_activies = [
+        "you"
+    ]
+
+    streaming_activies = [
+        "your webcam"
+    ]
+
+    listening_activies = [
+        " the voices in my head"
+    ]
+
+    if real_activity_type == "playing":
+        chosen_activity = secrets.choice(playing_activities)
+        activity = discord.Game(name=chosen_activity, type=discord.ActivityType.playing)
+    elif real_activity_type == "watching":
+        chosen_activity = secrets.choice(watching_activies)
+        activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.watching)
+    elif real_activity_type == "streaming":
+        chosen_activity = secrets.choice(streaming_activies)
+        activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    elif real_activity_type == "listening":
+        chosen_activity = secrets.choice(listening_activies)
+        activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.listening)
+    
+    await bot.change_presence(activity=activity)
+    logging.info(f"Activity: {real_activity_type} {chosen_activity}")
+
+@random_activity.before_loop
+async def before_loop():
+    await bot.wait_until_ready()
+    logging.info("Started random_activity")
 
 # --- FUN COMMANDS ---
 
@@ -297,8 +338,7 @@ async def eightball(ctx):
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}")
-
+    logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}") 
 
 # --- INFO COMMANDS ---
 
@@ -370,7 +410,7 @@ async def botinfo(ctx):
 
 
 @bot.command(description="Get info about a User", aliases=["user", "checkuser"])
-async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless provided
+async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless providedw
     embed = discord.Embed(
         title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
@@ -439,6 +479,7 @@ async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless pro
         embed.set_thumbnail(url=target_user.avatar.url) # Sets user's pfp as thumbnail (small, top right)
     if hasattr(user, "banner") and user.banner:
         embed.set_image(url=user.banner.url) # Sets user's banner (Nitro Feature) as image (big, underneath)
+    
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used {ctx.message.content}")
@@ -491,6 +532,7 @@ async def serverinfo(ctx):
 
 
 # --- MODERATION COMMANDS ---
+
 
 
 # --- ADMIN COMMANDS ---
