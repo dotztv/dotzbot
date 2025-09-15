@@ -358,7 +358,21 @@ async def eightball(ctx):
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}") 
 
+@bot.command(description="Literally just blackjack", aliases=["bj"])
+async def blackjack(ctx):
+    await ctx.reply("Available in the neat future!", mention_author=True)
 
+@bot.command(description="Probably not exactly like poker, but close enough")
+async def poker(ctx):
+    await ctx.reply("Eventually this will be real", mention_author=True)
+
+@bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
+async def guessthenumber(ctx):
+    await ctx.reply("eventually...", mention_author=True)
+
+@bot.command(description="Trivia Time!!")
+async def trivia(ctx):
+    await ctx.reply("eventually...", mention_author=True)
 # --- INFO COMMANDS ---
 
 
@@ -552,6 +566,21 @@ async def serverinfo(ctx):
 
 # --- MODERATION COMMANDS ---
 
+@bot.command(description="Bans the specified user", aliases=["begone"])
+async def ban(ctx):
+    await ctx.reply("eventually...", mention_author=True)
+
+@bot.command(description="Kicks the specified user", aliases=["fuckoff"])
+async def kick(ctx):
+    await ctx.reply("eventually...", mention_author=True)
+
+@bot.command(description="Times out the specified user", aliases=["shutup"])
+async def timeout(ctx):
+    await ctx.reply("eventually...", mention_author=True)
+
+@bot.command(description="Unbans the specified user", aliases=["sorry", "comeback"])
+async def unban(ctx):
+    await ctx.reply("eventually...", mention_author=True)
 
 
 # --- ADMIN COMMANDS ---
