@@ -3,12 +3,12 @@ import logging
 import os
 from datetime import datetime
 import secrets
-from time import sleep
+import aiohttp
 
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands, tasks
-
+import platform
 
 # --- Functions ---
 
@@ -32,6 +32,12 @@ def get_uptime() -> str:
     hours, remainder = divmod(remainder, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
+
+
+def get_command_count(bot): # Partly made by chatgpt
+    visible = len([cmd for cmd in bot.commands if not cmd.hidden])
+    hidden = len([cmd for cmd in bot.commands if cmd.hidden])
+    return visible, hidden
 
 
 # --- Setup ---
@@ -110,20 +116,20 @@ async def random_activity():
         "with dotz's sanity"
     ]
     
-    watching_activies = [
+    watching_activities = [
         "you",
         "over everything you say",
         "the drama"
     ]
 
-    streaming_activies = [
+    streaming_activities = [
         "your webcam",
         "your browser history",
         "the hidden camera in your room",
         "your fridge"
     ]
 
-    listening_activies = [
+    listening_activities = [
         "the voices in my head",
         "the drama",
         "the silence",
@@ -134,13 +140,13 @@ async def random_activity():
         chosen_activity = secrets.choice(playing_activities)
         activity = discord.Game(name=chosen_activity, type=discord.ActivityType.playing)
     elif real_activity_type == "watching":
-        chosen_activity = secrets.choice(watching_activies)
+        chosen_activity = secrets.choice(watching_activities)
         activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.watching)
     elif real_activity_type == "streaming":
-        chosen_activity = secrets.choice(streaming_activies)
+        chosen_activity = secrets.choice(streaming_activities)
         activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     elif real_activity_type == "listening":
-        chosen_activity = secrets.choice(listening_activies)
+        chosen_activity = secrets.choice(listening_activities)
         activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.listening)
     
     await bot.change_presence(activity=activity)
@@ -335,7 +341,7 @@ async def eightball(ctx):
         "idk, ask the next guy"
     ]
 
-    eight_ball_answers = ["yes", "no", "unknown"] # makes it equal chance for yes, no or unknown incase there are different amounts of strings in each list
+    eight_ball_answers = ["yes", "no", "unknown"] # makes it equal chance for yes, no or unknown in case there are different amounts of strings in each list
     eight_ball_first_choice = secrets.choice(eight_ball_answers)
 
     if eight_ball_first_choice == "yes":
@@ -358,21 +364,27 @@ async def eightball(ctx):
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}") 
 
+
 @bot.command(description="Literally just blackjack", aliases=["bj"])
 async def blackjack(ctx):
     await ctx.reply("Available in the neat future!", mention_author=True)
+
 
 @bot.command(description="Probably not exactly like poker, but close enough")
 async def poker(ctx):
     await ctx.reply("Eventually this will be real", mention_author=True)
 
+
 @bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
 async def guessthenumber(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
+
 @bot.command(description="Trivia Time!!")
 async def trivia(ctx):
     await ctx.reply("eventually...", mention_author=True)
+
+
 # --- INFO COMMANDS ---
 
 
@@ -430,20 +442,62 @@ async def uptime(ctx):
 
 @bot.command(description="General info about the bot", aliases=["bot", "about"])
 async def botinfo(ctx):
+    # Fetch commit code, by chatgpt ofc
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.github.com/repos/dotztv/dotzbot/commits") as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                latest_commit = data[0]
+                commit_msg = latest_commit["commit"]["message"]
+                commit_url = latest_commit["html_url"]
+                commit_sha = latest_commit["sha"][:7]  # short sha
+            else:
+                commit_msg = "Could not fetch"
+                commit_url = ""
+                commit_sha = ""
+
+    visible, hidden = get_command_count(bot)
+    total = visible + hidden
+
+    with open("discord.log", "r") as f:
+        log_line_count = sum(1 for line in f)
+
     embed = discord.Embed(
-        title="About dotzbot",
-        description="dotzbot was made as a hobby, from a project of boredom",
+        title="dotzbot",
+        description="By <@550378971426979856> / Open-Source!",
         color=discord.Color.gold()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    embed.add_field(name="Latest Commit", value="ABC")
+
+    embed.add_field(name="Open-Source Info", value=f"", inline=False)
+    embed.add_field(name="GitHub Link", value="[dotztv/dotzbot](https://github.com/dotztv/dotzbot)")
+    embed.add_field(name="Latest Commit", value=f"[{commit_sha}]({commit_url})")
+    embed.add_field(name="Commit Message", value={commit_msg})
+
+    embed.add_field(name="Support", value="", inline=False)
+    embed.add_field(name="Discord Server", value="[dotz's corner](https://discord.gg/WgzRu2NB7S)")
+    embed.add_field(name="Developer DMs", value="@<550378971426979856>")
+
+    embed.add_field(name="Software", value="", inline=False)
+    embed.add_field(name="discord.py version", value=discord.__version__)
+    embed.add_field(name="Python Version", value=platform.python_version())
+
+    embed.add_field(name="Hosting", value="", inline=False)
+    embed.add_field(name="Machine", value="Raspberry Pi 5")
+    embed.add_field(name="Model", value="4GB Model")
+
+    embed.add_field(name="Statistics", value="", inline=False)
+    embed.add_field(name="Current Log Length", value=log_line_count)
+    embed.add_field(name="Server Count", value=len(bot.guilds))
+    embed.add_field(name="Command Amount", value=f"{total} ({hidden})") # for example, 9 total commands, 2 of which are hidden.
+
 
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $botinfo command")
 
 
 @bot.command(description="Get info about a User", aliases=["user", "checkuser"])
-async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless providedw
+async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless provided
     embed = discord.Embed(
         title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
@@ -565,18 +619,23 @@ async def serverinfo(ctx):
 
 
 # --- MODERATION COMMANDS ---
+# consider permission check function
+
 
 @bot.command(description="Bans the specified user", aliases=["begone"])
 async def ban(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
+
 @bot.command(description="Kicks the specified user", aliases=["fuckoff"])
 async def kick(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
+
 @bot.command(description="Times out the specified user", aliases=["shutup"])
 async def timeout(ctx):
     await ctx.reply("eventually...", mention_author=True)
+
 
 @bot.command(description="Unbans the specified user", aliases=["sorry", "comeback"])
 async def unban(ctx):
