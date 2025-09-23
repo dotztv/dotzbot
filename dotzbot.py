@@ -1,7 +1,8 @@
 # --- Imports ---
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, time, timezone
+from zoneinfo import ZoneInfo
 import secrets
 import aiohttp
 
@@ -26,7 +27,7 @@ def get_random_file(folder_path) -> str:
 
 def get_uptime() -> str:
     """Returns the bot's uptime."""
-    now = datetime.utcnow()
+    now = datetime.now(cestime)
     delta = now - BOT_START_TIME
     days, remainder = divmod(delta.total_seconds(), 86400)
     hours, remainder = divmod(remainder, 3600)
@@ -44,12 +45,17 @@ def get_command_count(bot): # Partly made by chatgpt
 
 
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN") # Gets the discord token from the .env file
 intents = discord.Intents.all() # Gives it all intents, TODO: Make it only have what it needs, same with permissions
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None) # Sets up bot with discord.ext command prefix, all intents and removes default help command
 
+louu_dm = os.getenv("LOUU_DM") # for privacy reasons
+cestime = ZoneInfo("Europe/Oslo") # should definetely name that better
+
+TOKEN = os.getenv("DISCORD_TOKEN") # Gets the discord token from the .env file
+BOT_START_TIME = datetime.now(cestime)
+
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w') # Sets up logging
-logging.basicConfig(format=f"{get_time_now()} / %(levelname)s = %(message)s", level=logging.INFO)
+logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
 
 
 # --- Bot Events ---
@@ -57,9 +63,6 @@ logging.basicConfig(format=f"{get_time_now()} / %(levelname)s = %(message)s", le
 
 @bot.event
 async def on_ready():
-    global BOT_START_TIME # makes sure it's usable everywhere
-    BOT_START_TIME = datetime.utcnow() # also used in get_uptime()
-
     embed = discord.Embed(
         title="dotzbot is online",
         description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"), # Formats to a more readable version
@@ -68,7 +71,11 @@ async def on_ready():
     dotzbot_channel = bot.get_channel(1399359500049190912) # Channel ID of my server's channel for the bot
     await dotzbot_channel.send(embed=embed) # Sends it to the specified channel
     logging.info(f"Logged in as {bot.user}")
-    random_activity.start()
+
+    if not random_activity.is_running(): # Incase we disconnect, it'll fire this again.
+        random_activity.start() # If it's already running, it'll raise an error.
+    if not dm_louu.is_running():
+        dm_louu.start()
 
 
 @bot.event # Vibe coded error handler
@@ -80,6 +87,7 @@ async def on_command_error(ctx, error):
     )
     await ctx.reply(embed=embed, mention_author=True)
     logging.error(f"{error}")
+
 
 @bot.event
 async def on_guild_join(guild):
@@ -105,15 +113,16 @@ async def on_guild_join(guild):
 # --- TASKS ---
 
 
-@tasks.loop(seconds=120)
+@tasks.loop(seconds=300) # 5min / 288 times per 24 hours
 async def random_activity():
-    activity_type = ["playing", "watching", "streaming", "listening"]
-    real_activity_type = secrets.choice(activity_type)
+    activity_types = ["playing", "watching", "streaming", "listening to"]
+    real_activity_type = secrets.choice(activity_types)
 
     playing_activities = [
         "with your electric box",
         "with the doll in my basement",
-        "with dotz's sanity"
+        "with dotz's sanity",
+        "with my balls" #by sindre6190
     ]
     
     watching_activities = [
@@ -133,24 +142,26 @@ async def random_activity():
         "the voices in my head",
         "the drama",
         "the silence",
-        "how useless i am"
+        "how useless i am",
+        
     ]
 
     if real_activity_type == "playing":
         chosen_activity = secrets.choice(playing_activities)
-        activity = discord.Game(name=chosen_activity, type=discord.ActivityType.playing)
+        activity = discord.Game(name=chosen_activity)
     elif real_activity_type == "watching":
         chosen_activity = secrets.choice(watching_activities)
         activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.watching)
     elif real_activity_type == "streaming":
         chosen_activity = secrets.choice(streaming_activities)
         activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-    elif real_activity_type == "listening":
+    elif real_activity_type == "listening to":
         chosen_activity = secrets.choice(listening_activities)
         activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.listening)
     
     await bot.change_presence(activity=activity)
     logging.info(f"Activity: {real_activity_type} {chosen_activity}")
+
 
 @random_activity.before_loop
 async def before_loop():
@@ -158,10 +169,28 @@ async def before_loop():
     logging.info("Started random_activity")
 
 
+@tasks.loop(time=time(hour=23, minute=0, tzinfo=cestime))
+async def dm_louu():
+    try:
+        user = bot.get_user(int(louu_dm))
+        await user.send("Reminder to do your QOTD!")
+        print(user)
+    except Exception as error:
+        logging.error(f"dm_louu failed: {error}")
+
+    logging.info("Reminded louuheyy for QOTD")
+
+
+@dm_louu.before_loop
+async def before_dmlouu():
+    await bot.wait_until_ready()
+    logging.info("Started dm_louu")
+
+
 # --- FUN COMMANDS ---
 
 
-@bot.command(description="Get a random (un-moderated) meme")
+@bot.command(description="Get a random (un-moderated) meme", category="fun", aliases=["memes"])
 async def meme(ctx):
     folder_path = "./memefolder"
     random_file = get_random_file(folder_path)
@@ -181,7 +210,7 @@ async def meme(ctx):
     logging.info(f"{ctx.author} ({ctx.author.id}) got meme {file_name} out of {num_files} files")
 
 
-@bot.command(description="Roll an X sided dice", aliases=["dice", "dice_roll", "diceroll", "rolldice", "roll_dice"])
+@bot.command(description="Roll an X sided dice", category="fun", aliases=["dice", "dice_roll", "diceroll", "rolldice", "roll_dice"])
 async def roll(ctx, dice_sides: int = 100):
     if dice_sides <= 0: # If equal or less
         embed = discord.Embed(
@@ -220,7 +249,7 @@ async def coinflip(ctx):
     logging.info(f"{ctx.author}'s ({ctx.author.id}) coin landed on {coin}")
 
 
-@bot.command(description="Highest card wins", aliases=["hc"])
+@bot.command(description="Highest card wins", category="fun", aliases=["hc"])
 async def highcard(ctx):
     user_card = 1 + secrets.randbelow(13)
 
@@ -271,7 +300,8 @@ async def highcard(ctx):
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
 
-@bot.command(description="Play Rock Paper Scissors, default choice is scissors")
+
+@bot.command(description="Play Rock Paper Scissors, default choice is scissors", category="fun")
 async def rps(ctx, choice: str = None):
     rps_choices = ["rock", "paper", "scissors"]
     embed = discord.Embed(
@@ -327,7 +357,7 @@ async def rps(ctx, choice: str = None):
     await ctx.reply(embed=embed, mention_author=True)
 
 
-@bot.command(description="The wisdom of the eight ball upon you", aliases=["8ball", "8b"])
+@bot.command(description="The wisdom of the eight ball upon you", category="fun", aliases=["8ball", "8b"])
 async def eightball(ctx):
     yes_answers = [ # 7
         "yes", "why not", "absolutely", "hell yeah", "without a doubt", "absolutely", "uh, obviously"
@@ -365,22 +395,25 @@ async def eightball(ctx):
     logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{ctx.message.content}' with {eight_ball_real_choice}") 
 
 
-@bot.command(description="Literally just blackjack", aliases=["bj"])
+# --- GAMBLING COMMANDS ---
+
+
+@bot.command(description="Literally just blackjack", category="gambling", aliases=["bj"])
 async def blackjack(ctx):
     await ctx.reply("Available in the neat future!", mention_author=True)
 
 
-@bot.command(description="Probably not exactly like poker, but close enough")
+@bot.command(description="Probably not exactly like poker, but close enough", category="gambling", aliases=["pk"])
 async def poker(ctx):
     await ctx.reply("Eventually this will be real", mention_author=True)
 
 
-@bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
+@bot.command(description="Can you guess the bot's number?", category="gambling", aliases=["gnm"])
 async def guessthenumber(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
 
-@bot.command(description="Trivia Time!!")
+@bot.command(description="Trivia Time!!", category="gambling", aliases=["quiz"])
 async def trivia(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
@@ -388,7 +421,7 @@ async def trivia(ctx):
 # --- INFO COMMANDS ---
 
 
-@bot.command(description="Shows this list!", aliases=["?"])
+@bot.command(description="Shows this list!", category="info", aliases=["?"])
 async def help(ctx):
     is_owner = False
     try:
@@ -414,7 +447,7 @@ async def help(ctx):
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $help command")
 
 
-@bot.command(description="Show the bot's latency", aliases=["latency", "lag", "ms"])
+@bot.command(description="Show the bot's latency", category="info", aliases=["latency", "lag", "ms"])
 async def ping(ctx):
     latency = round(bot.latency * 1000) # Copilot told me to multiply this by a thousand so
     embed = discord.Embed(
@@ -427,7 +460,7 @@ async def ping(ctx):
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $ping command ({latency}ms)")
 
 
-@bot.command(description="Show how long the bot has been running", aliases=["lifetime", "upkeep"])
+@bot.command(description="Show how long the bot has been running", category="info", aliases=["lifetime", "upkeep"])
 async def uptime(ctx):
     uptime_str = get_uptime()
     embed = discord.Embed(
@@ -440,7 +473,7 @@ async def uptime(ctx):
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $uptime command ({uptime_str})")
 
 
-@bot.command(description="General info about the bot", aliases=["bot", "about"])
+@bot.command(description="General info about the bot", category="info", aliases=["bot", "about"])
 async def botinfo(ctx):
     # Fetch commit code, by chatgpt ofc
     async with aiohttp.ClientSession() as session:
@@ -472,7 +505,7 @@ async def botinfo(ctx):
     embed.add_field(name="Open-Source Info", value=f"", inline=False)
     embed.add_field(name="GitHub Link", value="[dotztv/dotzbot](https://github.com/dotztv/dotzbot)")
     embed.add_field(name="Latest Commit", value=f"[{commit_sha}]({commit_url})")
-    embed.add_field(name="Commit Message", value={commit_msg})
+    embed.add_field(name="Commit Message", value=commit_msg)
 
     embed.add_field(name="Support", value="", inline=False)
     embed.add_field(name="Discord Server", value="[dotz's corner](https://discord.gg/WgzRu2NB7S)")
@@ -496,7 +529,7 @@ async def botinfo(ctx):
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $botinfo command")
 
 
-@bot.command(description="Get info about a User", aliases=["user", "checkuser"])
+@bot.command(description="Get info about a User", category="info", aliases=["user", "checkuser"])
 async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless provided
     embed = discord.Embed(
         title="$userinfo wrong usage",
@@ -572,7 +605,7 @@ async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless pro
     logging.info(f"{ctx.author} ({ctx.author.id}) used {ctx.message.content}")
 
 
-@bot.command(description="Get info about the current server", aliases=["server", "checkserver"])
+@bot.command(description="Get info about the current server", category="info", aliases=["server", "checkserver"])
 async def serverinfo(ctx):
     if ctx.guild: # if run in a server (True)
         server_name = ctx.guild.name
@@ -622,22 +655,22 @@ async def serverinfo(ctx):
 # consider permission check function
 
 
-@bot.command(description="Bans the specified user", aliases=["begone"])
+@bot.command(description="Bans the specified user", category="moderation", aliases=["begone"])
 async def ban(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
 
-@bot.command(description="Kicks the specified user", aliases=["fuckoff"])
+@bot.command(description="Kicks the specified user", category="moderation", aliases=["fuckoff"])
 async def kick(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
 
-@bot.command(description="Times out the specified user", aliases=["shutup"])
+@bot.command(description="Times out the specified user", category="moderation", aliases=["shutup"])
 async def timeout(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
 
-@bot.command(description="Unbans the specified user", aliases=["sorry", "comeback"])
+@bot.command(description="Unbans the specified user", category="moderation", aliases=["sorry", "comeback"])
 async def unban(ctx):
     await ctx.reply("eventually...", mention_author=True)
 
@@ -645,7 +678,7 @@ async def unban(ctx):
 # --- ADMIN COMMANDS ---
 
 
-@bot.command(description="Shuts down the bot (dotz only)", hidden=True, aliases=["die", "kys", "fuckingdie", "de-exist"])
+@bot.command(description="Shuts down the bot (dotz only)", category="admin", hidden=True, aliases=["die", "kys", "fuckingdie", "de-exist"])
 @commands.is_owner()
 async def shutdown(ctx):
     time_at_shutdown = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -665,7 +698,7 @@ async def shutdown(ctx):
     await bot.close()
 
 
-@bot.command(description="List all servers the bot is in (dotz only)", hidden=True, aliases=["servers"])
+@bot.command(description="List all servers the bot is in (dotz only)", category="admin", hidden=True, aliases=["servers"])
 @commands.is_owner()
 async def serverlist(ctx):
     embed = discord.Embed(
@@ -681,5 +714,6 @@ async def serverlist(ctx):
         )
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used $serverlist command ({len(bot.guilds)} servers)")
+
 
 bot.run(TOKEN, log_handler=handler, log_level=logging.INFO)
