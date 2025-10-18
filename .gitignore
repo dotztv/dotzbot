@@ -1,4 +1,4 @@
-*.log
+discord.log
 .env
-memefolder/
 .vscode/
+meme.png
