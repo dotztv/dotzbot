@@ -611,42 +611,39 @@ botinfo.category = "info"
 
 @bot.command(description="Get info about a User", aliases=["user", "checkuser"])
 async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless provided
-    embed = discord.Embed(
+    embed = discord.Embed( # Set the embed first to an error message
         title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
         color=discord.Color.red()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
-    if user_id is not None: # If it's literally anything, so a string (a ping) or an int (userID)
-        if user_id.startswith("<@") and user_id.endswith(">"):  # Ping Method
+    if user_id is None: # Send the error if no argument is provided
+        await ctx.reply(embed=embed, mention_author=True)
+        logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
+        return
+    elif user_id is not None: # Check if user_id was provided
+        # Check if user_id is a ping
+        if user_id.startswith("<@") and user_id.endswith(">"): 
             user_id = user_id.replace("<@", "").replace("!", "").replace(">", "") # Removes ping casing to get ID only
-        else:
-            try: # Other Method, assuming it's a UserID
-                placeholder_variable = int(user_id) # placeholder_variable cause if it's an actual variable then it'll crash for some reason
+        # If it's not a ping, it's probably an ID
+        else: 
+            try: # if it isn't an ID, it'll raise ValueError and send the error message
+                placeholder_variable = int(user_id) # placeholder_variable, cause if it's an actual variable; it'll crash for some reason
             except ValueError: # If it's not a UserID but instead some failed ping or something, it won't work
                 await ctx.reply(embed=embed, mention_author=True)
                 logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
                 return
 
-    elif user_id is None: # If there is no arg at all
-        await ctx.reply(embed=embed, mention_author=True)
-        logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
-        return
+    # Putting my full trust in the function above
+    user_id = int(user_id) # Converts to int for fetch_user
 
-    try:
-        user_id = int(user_id) # Makes user_id an integer so it can be used in fetch_user
-    except ValueError: # A "just in case" code
-        await ctx.reply("Some error happened, contact dotz", mention_author=True) 
-        logging.error(f"{ctx.author} ({ctx.author.id}) somehow got ValueError in $userinfo! ({ctx.message.content})")
-        return
-
-    try:
+    try: # Attempt to fetch the user, so we can use it for information
         user = await bot.fetch_user(user_id)
         member_obj = ctx.guild.get_member(user_id) if ctx.guild else None # gets member object if in a server -github copilot
-        target_user = member_obj if member_obj else user
-    except (ValueError, discord.NotFound):
-        await ctx.reply("User not found.", mention_author=True)
+        target_user = member_obj if member_obj else user # not going to lie, i dont know why this is here but i'm too scared to remove it
+    except (discord.NotFound): # User doesn't exist
+        await ctx.reply("User doesn't seem to exist? Try again with copying their ID or pinging them", mention_author=True)
         logging.error(f"{ctx.author} ({ctx.author.id}) provided a user we couldn't fetch? ({ctx.message.content})")
         return
 
@@ -655,10 +652,10 @@ async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless pro
         description = "Hey, It's my creator!"
     elif user_id == 1267637358942224516: # dotzbot
         description = "Wait a minute, that's me!"
-    else:
+    else: # literally nobody
         description = ""
 
-    embed = discord.Embed( # Modifies embed to have actual info and not an error
+    embed = discord.Embed( # Changes the embed to the actual user info
         title="User Information",
         description=description,
         color=discord.Color.green()
@@ -667,17 +664,22 @@ async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless pro
     embed.add_field(name="User ID", value=str(target_user.id))
     embed.add_field(name="Account Created", value=target_user.created_at.strftime("%Y-%m-%d %H:%M:%S"))
     embed.add_field(name="Bot?", value="Yes" if target_user.bot else "No")
+
     if member_obj and member_obj.joined_at: # If run in a server
         embed.add_field(name="Joined Server", value=member_obj.joined_at.strftime("%Y-%m-%d %H:%M:%S"))
-    if member_obj and member_obj.roles: # If run in a server, for some reason will still run even if user has no roles
-        embed.add_field( # todo, fix by reading documentation (i wont)
+    
+    if member_obj and member_obj.roles:
+        embed.add_field(
             name="Roles",
             value=", ".join([role.name for role in member_obj.roles if role.name != "@everyone"])
         )
-    if target_user.avatar:
+
+    if target_user.avatar: # If they have a custom pfp
         embed.set_thumbnail(url=target_user.avatar.url) # Sets user's pfp as thumbnail (small, top right)
-    if hasattr(user, "banner") and user.banner:
-        embed.set_image(url=user.banner.url) # Sets user's banner (Nitro Feature) as image (big, underneath)
+    
+    if hasattr(user, "banner") and user.banner: # If they have a custom banner (Nitro Feature)
+        embed.set_image(url=user.banner.url) # Sets user's banner as image (big, underneath)
+    
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used {ctx.message.content}")
