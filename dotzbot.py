@@ -17,7 +17,6 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import requests
 from dotenv import load_dotenv
-from ossapi import Ossapi  # temporary, for a osu!pp war between friends
 
 
 # --- Functions ---
@@ -51,7 +50,6 @@ load_dotenv()
 intents = discord.Intents.all()  # Gives it all intents, TODO: Make it only have what it needs, same with permissions
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Sets up bot with discord.ext command prefix, all intents and removes default help command
 
-LOUU_DM = os.getenv("LOUU_DM")  # for privacy reasons
 CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
 
 TOKEN = os.getenv("DISCORD_TOKEN")  # Gets the discord token from the .env file
@@ -60,10 +58,6 @@ BOT_START_TIME = datetime.now(CESTIME)
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
 logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
 
-# osu!pp war - temporary
-OSSAPI_SECRET = os.getenv("OSUAPI-SECRET")
-OSSAPI_CLIENT_ID = os.getenv("OSUAPI-CLIENT-ID")
-SINDRUS_DM = os.getenv("SINDRUS_DM")  # for privacy reasons
 
 
 # --- Bot Events ---
@@ -90,10 +84,6 @@ async def on_ready():
     # Global sync moved to owner-only command ($synctree)
     if not random_activity.is_running():  # Incase we disconnect, it'll fire this again.
         random_activity.start()  # If it's already running, it'll raise an error.
-    if not dm_louu.is_running():
-        dm_louu.start()
-    if not osupp_war.is_running():
-        osupp_war.start()
 
 
 @bot.event # Vibe coded error handler
@@ -141,7 +131,7 @@ async def random_activity():
         "with your electric box",
         "with the doll in my basement",
         "with dotz's sanity",
-    "with my balls"  # by sindre6190
+        "with my balls"  # by sindre6190
     ]
 
     watching_activities = [
@@ -186,67 +176,7 @@ async def before_loop():
     await bot.wait_until_ready()
     logging.info("Started random_activity")
 
-
-@tasks.loop(time=time(hour=0, minute=30, tzinfo=CESTIME))
-async def dm_louu():
-    try:
-        user = bot.get_user(int(LOUU_DM))
-        await user.send("Reminder to do your QOTD!")
-    except Exception as error:
-        logging.error(f"dm_louu failed: {error}")
-
-    logging.info("Reminded louuheyy for QOTD")
-
-
-@dm_louu.before_loop
-async def before_dmlouu():
-    await bot.wait_until_ready()
-    logging.info("Started dm_louu")
-
-
-@tasks.loop(time=time(hour=16, minute=30, tzinfo=CESTIME))  # ossapi usage
-async def osupp_war():
-    api = Ossapi(client_id=OSSAPI_CLIENT_ID, client_secret=OSSAPI_SECRET)
-    
-    sindrusumulius = api.user("sindrusumulius")
-    louuheyy = api.user("louuheyy")
-
-    sindrusPP = sindrusumulius.statistics.pp
-    louuPP = louuheyy.statistics.pp
-
-    if sindrusPP > louuPP:
-        leader = "sindrusumulius"
-        pp_lead = sindrusPP - louuPP
-    elif sindrusPP < louuPP:
-        leader = "louuheyy"
-        pp_lead = louuPP - sindrusPP
-    else:
-        leader = "Perfect Tie"
-        pp_lead = 0
-    
-    embed = discord.Embed(
-        title="osu!pp war report",
-        description=get_time_now(),
-        color=discord.Color.green()
-    )
-    embed.add_field(name="", value=f"sindrusumulius: **{sindrusPP:.3f}**pp")
-    embed.add_field(name="", value=f"louuheyy: **{louuPP:.3f}**pp")
-    embed.add_field(name="", value=f"Lead: **{pp_lead:.3f}pp** to **{leader}**")
-    embed.set_footer(text="why did i do this -dotz")
-
-    try:
-        louuuser = bot.get_user(int(LOUU_DM))
-        sindrususer = bot.get_user(int(SINDRUS_DM))
-        dotzuser = bot.get_user(550378971426979856)
-        if louuuser:
-            await louuuser.send(embed=embed)
-        if sindrususer:
-            await sindrususer.send(embed=embed)
-        if dotzuser:
-            await dotzuser.send(embed=embed)
-    except Exception as error:
-        logging.error(f"osupp_war failed: {error}")
-    
+# Removed osu!pp war thing, maybe i should use the ossapi for a command?
 
 # --- FUN COMMANDS ---
 
