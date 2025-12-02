@@ -50,6 +50,7 @@ def get_command_count(bot): # Partly made by chatgpt
 load_dotenv()
 intents = discord.Intents.all()  # Gives it all intents, TODO: Make it only have what it needs, same with permissions
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Sets up bot with discord.ext command prefix, all intents and removes default help command
+online = False
 
 CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
 
@@ -65,25 +66,28 @@ logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=l
 
 @bot.event
 async def on_ready():
-    embed = discord.Embed(
-        title="dotzbot is online",
-        description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
-        color=discord.Color.green()
-    )
-    dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
-    await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
-    logging.info(f"Logged in as {bot.user}")
-    # Sync application commands: first to dev guild for fast testing, then globally
-    try:
-        dev_guild = discord.Object(id=907012194175176714)
-        await bot.tree.sync(guild=dev_guild)
-        logging.info(f"Synced application commands to dev guild {dev_guild.id}")
-    except Exception:
-        logging.exception("Failed to sync application commands to dev guild")
 
-    # Global sync moved to owner-only command ($synctree)
-    if not random_activity.is_running():  # Incase we disconnect, it'll fire this again.
-        random_activity.start()  # If it's already running, it'll raise an error.
+    if not online:
+        embed = discord.Embed(
+            title="dotzbot is online",
+            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+            color=discord.Color.green()
+        )
+        dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
+        await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
+        logging.info(f"Logged in as {bot.user}")
+        # Sync application commands: first to dev guild for fast testing, then globally
+        try:
+            dev_guild = discord.Object(id=907012194175176714)
+            await bot.tree.sync(guild=dev_guild)
+            logging.info(f"Synced application commands to dev guild {dev_guild.id}")
+        except Exception:
+            logging.exception("Failed to sync application commands to dev guild")
+
+        # Global sync moved to owner-only command ($synctree)
+        if not random_activity.is_running():  # Incase we disconnect, it'll fire this again.
+            random_activity.start()  # If it's already running, it'll raise an error.
+        online = True
 
 
 @bot.event # Vibe coded error handler
