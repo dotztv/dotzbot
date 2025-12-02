@@ -8,6 +8,7 @@ import os
 import platform
 import secrets
 from datetime import datetime, time
+import time as time_module
 from zoneinfo import ZoneInfo
 
 # Third-party
@@ -57,7 +58,6 @@ BOT_START_TIME = datetime.now(CESTIME)
 
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
 logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
-
 
 
 # --- Bot Events ---
@@ -122,53 +122,39 @@ async def on_guild_join(guild):
 # --- TASKS ---
 
 
-@tasks.loop(seconds=300)  # 5min / 288 times per 24 hours
+@tasks.loop(seconds=300)  # 5min / 288 times per day
 async def random_activity():
-    activity_types = ["playing", "watching", "streaming", "listening to"]
-    real_activity_type = secrets.choice(activity_types)
-
-    playing_activities = [
-        "with your electric box",
-        "with the doll in my basement",
-        "with dotz's sanity",
-        "with my balls"  # by sindre6190
+    possible_activities = [
+        "playing with your electric box",
+        "playing with the doll in my basement",
+        "playing with dotz's sanity",
+        "playing with my balls",  # by sindre6190
+        "watching you",
+        "watching over everything you say",
+        "watching the drama",
+        "watching people lose their minds",
+        "watching people losing my minigames",
+        "watching dotz code",
+        "watching dotz suffer",
+        "watching dotz game",
+        "streaming your webcam",
+        "streaming your browser history",
+        "streaming the hidden camera in your room",
+        "streaming your fridge",
+        "listening to your conversations",
+        "listening to the voices in my head",
+        "listening to the drama",
+        "listening to the silence",
+        "listening to how useless i am",
+        "listening to dotz's complaints"
     ]
 
-    watching_activities = [
-        "you",
-        "over everything you say",
-        "the drama"
-    ]
-
-    streaming_activities = [
-        "your webcam",
-        "your browser history",
-        "the hidden camera in your room",
-        "your fridge"
-    ]
-
-    listening_activities = [
-        "the voices in my head",
-        "the drama",
-        "the silence",
-        "how useless i am",
-    ]
-
-    if real_activity_type == "playing":
-        chosen_activity = secrets.choice(playing_activities)
-        activity = discord.Game(name=chosen_activity)
-    elif real_activity_type == "watching":
-        chosen_activity = secrets.choice(watching_activities)
-        activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.watching)
-    elif real_activity_type == "streaming":
-        chosen_activity = secrets.choice(streaming_activities)
-        activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")  # may or may not be a rick roll
-    elif real_activity_type == "listening to":
-        chosen_activity = secrets.choice(listening_activities)
-        activity = discord.Activity(name=chosen_activity, type=discord.ActivityType.listening)
+    activity_number = secrets.randbelow(len(possible_activities))
+    chosen_activity = possible_activities[activity_number]
+    activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")  # may or may not be a rick roll
 
     await bot.change_presence(activity=activity)
-    logging.info(f"Activity: {real_activity_type} {chosen_activity}")
+    logging.info(f"Activity: {chosen_activity} ({activity_number}/{len(possible_activities)})")
 
 
 @random_activity.before_loop
@@ -183,40 +169,42 @@ async def before_loop():
 
 @bot.hybrid_command(with_app_command=True, description="Get a random meme", aliases=["memes"])
 async def meme(ctx):
-    response = requests.get("https://meme-api.com/gimme")  # these first two lines are stolen
-    json_data = json.loads(response.text)  # from a codedex guide of how to make a discord bot
-    
-    name = json_data["title"]
-    subreddit = json_data["subreddit"]
-    url = json_data["url"]
-    nsfw = json_data["nsfw"]
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://meme-api.com/gimme") as resp:
+            if resp.status != 200:
+                await ctx.reply("Failed to fetch meme API.", mention_author=True)
+                return
+            json_data = await resp.json()
 
-    if str(nsfw).lower() == "true":
-        embed = discord.Embed(
-            title="Failed to get a meme",
-            description="Please try again",
-            color=discord.Color.red()
-        )
-        embed.add_field(name="Error", value="The meme fetched was marked as NSFW, and dotz is too lazy to make it redo the thing")
-        embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-        await ctx.reply(embed=embed, mention_author=True)
-        logging.info(f"{ctx.author} ({ctx.author.id}) got an NSFW meme, blocked")
-        return
+        url = json_data.get("url")
+        nsfw = json_data.get("nsfw", False)
+        if nsfw:
+            embed = discord.Embed(
+                title="Failed to get a meme",
+                description="Meme was NSFW, try again.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+            await ctx.reply(embed=embed, mention_author=True)
+            return
 
-    async with aiohttp.ClientSession() as session:  # this thing is 99% stolen from whatever ai the google search engine has
-        async with session.get(url) as resp:
-            if resp.status == 200:
-                with open("meme.png", "wb") as f:
-                    f.write(await resp.read())
+        async with session.get(url) as img_resp:
+            if img_resp.status != 200:
+                await ctx.reply("Failed to download meme image.", mention_author=True)
+                return
+            img_bytes = await img_resp.read()
 
+    from io import BytesIO
+    bio = BytesIO(img_bytes)
+    bio.seek(0)
     embed = discord.Embed(
-        title=name,
-        description=f"r/{subreddit}",
+        title=json_data.get("title"),
+        description=f"r/{json_data.get('subreddit')}",
         color=discord.Color.green()
     )
     embed.add_field(name="API", value="https://meme-api.com/gimme")
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.reply(embed=embed, file=discord.File("meme.png"), mention_author=True)
+    await ctx.reply(embed=embed, file=discord.File(fp=bio, filename="meme.png"), mention_author=True)
 meme.category = "fun"
 
 
@@ -777,5 +765,6 @@ async def synctree(ctx): # this entire command is written by copilot gpt5
         await ctx.reply(embed=embed, mention_author=True)
         logging.exception("Failed to globally sync application commands via $synctree")
 synctree.category = "admin"
+
 
 bot.run(TOKEN, log_handler=handler, log_level=logging.INFO)
