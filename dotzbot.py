@@ -38,7 +38,7 @@ def get_uptime() -> str:
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
 
-def get_command_count(bot): # Partly made by chatgpt
+def get_command_count(bot):  # Partly made by chatgpt
     visible = len([cmd for cmd in bot.commands if not cmd.hidden])
     hidden = len([cmd for cmd in bot.commands if cmd.hidden])
     return visible, hidden
@@ -82,14 +82,14 @@ async def on_ready():
             await bot.tree.sync(guild=dev_guild)
             logging.info(f"Synced application commands to dev guild {dev_guild.id}")
         except Exception:
-            logging.exception("Failed to sync application commands to dev guild")
+            logging.error("Failed to sync application commands to dev guild")
 
         # Removed if not is_running cause this will now only run once
         random_activity.start()
         im_alive.start()
 
 
-@bot.event # Vibe coded error handler
+@bot.event  # Vibe coded error handler
 async def on_command_error(ctx, error):
     embed = discord.Embed(
         title="An error occurred",
@@ -157,13 +157,13 @@ async def random_activity():
     activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")  # may or may not be a rick roll
 
     await bot.change_presence(activity=activity)
-    #logging.info(f"Activity: {chosen_activity} ({activity_number}/{len(possible_activities)})")
 
 
 @random_activity.before_loop
 async def before_loop():
     await bot.wait_until_ready()
     logging.info("Started random_activity")
+
 
 @tasks.loop(hours=24)
 async def im_alive():
@@ -234,7 +234,6 @@ async def roll(ctx, dice_sides: int = 100):
         )
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, mention_author=True)
-        
         logging.info(f"{ctx.author} ({ctx.author.id}) just tried to roll a {dice_sides}-sided dice")
         return  # to not continue code
 
@@ -254,7 +253,7 @@ roll.category = "fun"
 async def coinflip(ctx, heads: str = None, tails: str = None):
     coin_sides = ["heads", "tails"]
     coin = secrets.choice(coin_sides)
-    if heads == None and tails == None:
+    if heads is None and tails is None:
         embed = discord.Embed(
             title="Coin Flip",
             description=f"{ctx.author.mention} flipped a coin and it landed on {coin}",
@@ -334,7 +333,7 @@ async def rps(ctx, choice: str = None):
         title="$rps wrong usage",
         description="You're supposed to say either rock, paper or scissors",
         color=discord.Color.red()
-        )
+    )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
     if choice is None:
@@ -425,7 +424,7 @@ async def eightball(ctx, question: str = None):
     await ctx.reply(embed=embed, mention_author=True)
     # For slash commands, ctx.message can be None; prefer the provided question if available
     q_text = question if question is not None else (getattr(getattr(ctx, "message", None), "content", "") or "")
-    logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{q_text}' with {eight_ball_real_choice}") 
+    logging.info(f"{ctx.author}'s ({ctx.author.id}) 8ball answered to '{q_text}' with {eight_ball_real_choice}")
 eightball.category = "fun"
 
 
@@ -465,7 +464,7 @@ async def help(ctx):
 
     try:
         is_owner = await bot.is_owner(ctx.author)
-    except (discord.HTTPException, discord.Forbidden, discord.NotFound): # Connection Failed (API Unreachable / Network Issue), No Permission or User doesn't exist
+    except (discord.HTTPException, discord.Forbidden, discord.NotFound):  # Connection Failed (API Unreachable / Network Issue), No Permission or User doesn't exist
         pass
 
     embed = discord.Embed(
@@ -476,7 +475,7 @@ async def help(ctx):
 
     for command in bot.commands:
         if command.hidden and not is_owner:
-            continue # Somehow(vibe coded) shows hidden commands for bot owner
+            continue  # Somehow(vibe coded) shows hidden commands for bot owner
         embed.add_field(
             name=f"${command.name}",
             value=command.description or "No description.",
@@ -490,7 +489,7 @@ help.category = "info"
 
 @bot.hybrid_command(with_app_command=True, description="Show the bot's latency", aliases=["latency", "lag", "ms"])
 async def ping(ctx):
-    latency = round(bot.latency * 1000) # Copilot told me to multiply this by a thousand so
+    latency = round(bot.latency * 1000)  # Copilot told me to multiply this by a thousand so
     embed = discord.Embed(
         title="Pong!",
         description=f"Latency: {latency} ms",
@@ -560,60 +559,59 @@ async def botinfo(ctx):
     embed.add_field(name="Statistics", value="", inline=False)
     embed.add_field(name="Current Log Length", value=log_line_count)
     embed.add_field(name="Server Count", value=len(bot.guilds))
-    embed.add_field(name="Command Amount", value=f"{total} ({hidden})") # for example, 9 total commands, 2 of which are hidden.
-
+    embed.add_field(name="Command Amount", value=f"{total} ({hidden})")  # for example, 9 total commands, 2 of which are hidden.
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $botinfo command")
 botinfo.category = "info"
 
 
 @bot.hybrid_command(with_app_command=True, description="Get info about a User", aliases=["user", "checkuser"])
-async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless provided
-    embed = discord.Embed( # Set the embed first to an error message
+async def userinfo(ctx, user_id: str = None):  # Defaults arg to None, unless provided
+    embed = discord.Embed(  # Set the embed first to an error message
         title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
         color=discord.Color.red()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
-    if user_id is None: # Send the error if no argument is provided
+    if user_id is None:  # Send the error if no argument is provided
         await ctx.reply(embed=embed, mention_author=True)
         logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
         return
-    elif user_id is not None: # Check if user_id was provided
+    elif user_id is not None:  # Check if user_id was provided
         # Check if user_id is a ping
-        if user_id.startswith("<@") and user_id.endswith(">"): 
-            user_id = user_id.replace("<@", "").replace("!", "").replace(">", "") # Removes ping casing to get ID only
+        if user_id.startswith("<@") and user_id.endswith(">"):
+            user_id = user_id.replace("<@", "").replace("!", "").replace(">", "")  # Removes ping casing to get ID only
         # If it's not a ping, it's probably an ID
-        else: 
-            try: # if it isn't an ID, it'll raise ValueError and send the error message
-                placeholder_variable = int(user_id) # placeholder_variable, cause if it's an actual variable; it'll crash for some reason
-            except ValueError: # If it's not a UserID but instead some failed ping or something, it won't work
+        else:
+            try:  # if it isn't an ID, it'll raise ValueError and send the error message
+                placeholder_variable = int(user_id)  # placeholder_variable, cause if it's an actual variable; it'll crash for some reason
+            except ValueError:  # If it's not a UserID but instead some failed ping or something, it won't work
                 await ctx.reply(embed=embed, mention_author=True)
                 logging.info(f"{ctx.author} ({ctx.author.id}) failed to use $userinfo ({ctx.message.content})")
                 return
 
     # Putting my full trust in the function above
-    user_id = int(user_id) # Converts to int for fetch_user
+    user_id = int(user_id)  # Converts to int for fetch_user
 
-    try: # Attempt to fetch the user, so we can use it for information
+    try:  # Attempt to fetch the user, so we can use it for information
         user = await bot.fetch_user(user_id)
-        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None # gets member object if in a server -github copilot
-        target_user = member_obj if member_obj else user # not going to lie, i dont know why this is here but i'm too scared to remove it
-    except (discord.NotFound): # User doesn't exist
+        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None  # gets member object if in a server -github copilot
+        target_user = member_obj if member_obj else user  # not going to lie, i dont know why this is here but i'm too scared to remove it
+    except (discord.NotFound):  # User doesn't exist
         await ctx.reply("User doesn't seem to exist? Try again with copying their ID or pinging them", mention_author=True)
         logging.error(f"{ctx.author} ({ctx.author.id}) provided a user we couldn't fetch? ({ctx.message.content})")
         return
 
     # Special people
-    if user_id == 550378971426979856: # dotz
+    if user_id == 550378971426979856:  # dotz
         description = "Hey, It's my creator!"
-    elif user_id == 1267637358942224516: # dotzbot
+    elif user_id == 1267637358942224516:  # dotzbot
         description = "Wait a minute, that's me!"
-    else: # literally nobody
+    else:  # literally nobody
         description = ""
 
-    embed = discord.Embed( # Changes the embed to the actual user info
+    embed = discord.Embed(  # Changes the embed to the actual user info
         title="User Information",
         description=description,
         color=discord.Color.green()
@@ -623,21 +621,21 @@ async def userinfo(ctx, user_id: str = None): # Defaults arg to None, unless pro
     embed.add_field(name="Account Created", value=target_user.created_at.strftime("%Y-%m-%d %H:%M:%S"))
     embed.add_field(name="Bot?", value="Yes" if target_user.bot else "No")
 
-    if member_obj and member_obj.joined_at: # If run in a server
+    if member_obj and member_obj.joined_at:  # If run in a server
         embed.add_field(name="Joined Server", value=member_obj.joined_at.strftime("%Y-%m-%d %H:%M:%S"))
-    
+
     if member_obj and member_obj.roles:
         embed.add_field(
             name="Roles",
             value=", ".join([role.name for role in member_obj.roles if role.name != "@everyone"])
         )
 
-    if target_user.avatar: # If they have a custom pfp
-        embed.set_thumbnail(url=target_user.avatar.url) # Sets user's pfp as thumbnail (small, top right)
-    
-    if hasattr(user, "banner") and user.banner: # If they have a custom banner (Nitro Feature)
-        embed.set_image(url=user.banner.url) # Sets user's banner as image (big, underneath)
-    
+    if target_user.avatar:  # If they have a custom pfp
+        embed.set_thumbnail(url=target_user.avatar.url)  # Sets user's pfp as thumbnail (small, top right)
+
+    if hasattr(user, "banner") and user.banner:  # If they have a custom banner (Nitro Feature)
+        embed.set_image(url=user.banner.url)  # Sets user's banner as image (big, underneath)
+
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used {ctx.message.content}")
@@ -646,11 +644,11 @@ userinfo.category = "info"
 
 @bot.hybrid_command(with_app_command=True, description="Get info about the current server", aliases=["server", "checkserver"])
 async def serverinfo(ctx):
-    if ctx.guild: # if run in a server (True)
+    if ctx.guild:  # if run in a server (True)
         server_name = ctx.guild.name
         embed_desc = ""
         embed_color = discord.Color.green()
-    else: # if not run a in a server, therefore DM (False)
+    else:  # if not run a in a server, therefore DM (False)
         server_name = "This is a DM"
         embed_desc = "But I'll try to give you some information anyways"
         embed_color = discord.Color.gold()
@@ -661,7 +659,7 @@ async def serverinfo(ctx):
         color=embed_color
     )
 
-    if ctx.guild: # If run in a server
+    if ctx.guild:  # If run in a server
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon.url)
         if ctx.guild.description:
@@ -675,7 +673,7 @@ async def serverinfo(ctx):
         embed.add_field(name="AFK Timeout", value=str(ctx.guild.afk_timeout), inline=True)
         embed.add_field(name="Server Boosts", value=str(ctx.guild.premium_subscription_count), inline=True)
         embed.add_field(name="Server Features", value=str(ctx.guild.features), inline=False)
-    else: # If not run in a server, therefore DM
+    else:  # If not run in a server, therefore DM
         embed.add_field(name="Channel ID", value=str(ctx.channel.id), inline=True)
         embed.add_field(name="Channel Creation Date", value=ctx.channel.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
         embed.add_field(name="Channel Type", value=str(ctx.channel.type), inline=True)
@@ -684,7 +682,7 @@ async def serverinfo(ctx):
         embed.add_field(name="Your Account Created", value=ctx.author.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
         embed.add_field(name="Are you a bot?", value="Yes" if ctx.author.bot else "No", inline=True)
         if ctx.author.avatar:
-            embed.set_thumbnail(url=ctx.author.avatar.url) # Sets user's pfp as thumbnail (small, top right)
+            embed.set_thumbnail(url=ctx.author.avatar.url)  # Sets user's pfp as thumbnail (small, top right)
 
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author} ({ctx.author.id}) used the $serverinfo command in {ctx.guild}")
@@ -734,7 +732,7 @@ async def shutdown(ctx):
 
     embed.add_field(name="", value=f"Uptime: {get_uptime()}")
     dotzbot_channel = bot.get_channel(1399359500049190912)
-    emoji = "✅" # defines emoji to react with
+    emoji = "✅"  # defines emoji to react with
     await ctx.message.add_reaction(emoji)
     await dotzbot_channel.send(embed=embed)
     logging.info(f"{ctx.author} ({ctx.author.id}) used $shutdown command!")
@@ -752,7 +750,7 @@ async def serverlist(ctx):
         color=discord.Color.gold()
     )
 
-    for guild in bot.guilds: # Adds each guild as it's own field
+    for guild in bot.guilds:  # Adds each guild as it's own field
         embed.add_field(
             name=guild.name,
             value=f"ID: {guild.id} | Members: {guild.member_count}",
@@ -762,9 +760,10 @@ async def serverlist(ctx):
     logging.info(f"{ctx.author} ({ctx.author.id}) used $serverlist command ({len(bot.guilds)} servers)")
 serverlist.category = "admin"
 
+
 @bot.command(description="Sync application commands globally (dotz only)", hidden=True)
 @commands.is_owner()
-async def synctree(ctx): # this entire command is written by copilot gpt5
+async def synctree(ctx):  # this entire command is written by copilot gpt5
     embed = discord.Embed(
         title="Syncing application commands",
         description="Attempting global sync...",
