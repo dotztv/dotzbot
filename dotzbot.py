@@ -50,12 +50,11 @@ def get_command_count(bot): # Partly made by chatgpt
 load_dotenv()
 intents = discord.Intents.all()  # Gives it all intents, TODO: Make it only have what it needs, same with permissions
 bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Sets up bot with discord.ext command prefix, all intents and removes default help command
-online = False
-
-CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
 
 TOKEN = os.getenv("DISCORD_TOKEN")  # Gets the discord token from the .env file
+CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
 BOT_START_TIME = datetime.now(CESTIME)
+online = False
 
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
 logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
@@ -66,7 +65,7 @@ logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=l
 
 @bot.event
 async def on_ready():
-
+    global online
     if not online:
         embed = discord.Embed(
             title="dotzbot is online",
@@ -76,6 +75,7 @@ async def on_ready():
         dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
         await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
         logging.info(f"Logged in as {bot.user}")
+        online = True
         # Sync application commands: first to dev guild for fast testing, then globally
         try:
             dev_guild = discord.Object(id=907012194175176714)
@@ -84,10 +84,9 @@ async def on_ready():
         except Exception:
             logging.exception("Failed to sync application commands to dev guild")
 
-        # Global sync moved to owner-only command ($synctree)
-        if not random_activity.is_running():  # Incase we disconnect, it'll fire this again.
-            random_activity.start()  # If it's already running, it'll raise an error.
-        online = True
+        # Removed if not is_running cause this will now only run once
+        random_activity.start()
+        im_alive.start()
 
 
 @bot.event # Vibe coded error handler
@@ -158,13 +157,30 @@ async def random_activity():
     activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")  # may or may not be a rick roll
 
     await bot.change_presence(activity=activity)
-    logging.info(f"Activity: {chosen_activity} ({activity_number}/{len(possible_activities)})")
+    #logging.info(f"Activity: {chosen_activity} ({activity_number}/{len(possible_activities)})")
 
 
 @random_activity.before_loop
 async def before_loop():
     await bot.wait_until_ready()
     logging.info("Started random_activity")
+
+@tasks.loop(hours=24)
+async def im_alive():
+    dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
+    embed = discord.Embed(
+        title="dotzbot hasn't crashed!",
+        description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+        color=discord.Color.yellow()
+    )
+    await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
+
+
+@im_alive.before_loop
+async def im_alive_before_loop():
+    await bot.wait_until_ready()
+    logging.info("Started im_alive")
+
 
 # Removed osu!pp war thing, maybe i should use the ossapi for a command?
 
@@ -173,42 +189,38 @@ async def before_loop():
 
 @bot.hybrid_command(with_app_command=True, description="Get a random meme", aliases=["memes"])
 async def meme(ctx):
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://meme-api.com/gimme") as resp:
-            if resp.status != 200:
-                await ctx.reply("Failed to fetch meme API.", mention_author=True)
+    gotmeme = False
+    while not gotmeme:
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://meme-api.com/gimme") as resp:
+                if resp.status != 200:
+                    await ctx.reply("Failed to fetch meme API.", mention_author=True)
+                    return
+                json_data = await resp.json()
+
+            url = json_data.get("url")
+            nsfw = json_data.get("nsfw", False)
+            if nsfw:
+                logging.info(f"{ctx.author} got an NSFW meme, retrying")
                 return
-            json_data = await resp.json()
 
-        url = json_data.get("url")
-        nsfw = json_data.get("nsfw", False)
-        if nsfw:
-            embed = discord.Embed(
-                title="Failed to get a meme",
-                description="Meme was NSFW, try again.",
-                color=discord.Color.red()
-            )
-            embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-            await ctx.reply(embed=embed, mention_author=True)
-            return
+            async with session.get(url) as img_resp:
+                if img_resp.status != 200:
+                    return
+                img_bytes = await img_resp.read()
 
-        async with session.get(url) as img_resp:
-            if img_resp.status != 200:
-                await ctx.reply("Failed to download meme image.", mention_author=True)
-                return
-            img_bytes = await img_resp.read()
-
-    from io import BytesIO
-    bio = BytesIO(img_bytes)
-    bio.seek(0)
-    embed = discord.Embed(
-        title=json_data.get("title"),
-        description=f"r/{json_data.get('subreddit')}",
-        color=discord.Color.green()
-    )
-    embed.add_field(name="API", value="https://meme-api.com/gimme")
-    embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-    await ctx.reply(embed=embed, file=discord.File(fp=bio, filename="meme.png"), mention_author=True)
+        from io import BytesIO
+        bio = BytesIO(img_bytes)
+        bio.seek(0)
+        embed = discord.Embed(
+            title=json_data.get("title"),
+            description=f"r/{json_data.get('subreddit')}",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="API", value="https://meme-api.com/gimme")
+        embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+        await ctx.reply(embed=embed, file=discord.File(fp=bio, filename="meme.png"), mention_author=True)
+        gotmeme = True
 meme.category = "fun"
 
 
@@ -239,15 +251,23 @@ roll.category = "fun"
 
 
 @bot.hybrid_command(with_app_command=True, description="Flip a coin, Heads or tails?", aliases=["cf", "coin", "flip", "flipacoin"])
-async def coinflip(ctx):
+async def coinflip(ctx, heads: str = None, tails: str = None):
     coin_sides = ["heads", "tails"]
     coin = secrets.choice(coin_sides)
-
-    embed = discord.Embed(
-        title="Coin Flip",
-        description=f"{ctx.author.mention} flipped a coin and it landed on {coin}",
-        color=discord.Color.green()
-    )
+    if heads == None and tails == None:
+        embed = discord.Embed(
+            title="Coin Flip",
+            description=f"{ctx.author.mention} flipped a coin and it landed on {coin}",
+            color=discord.Color.green()
+        )
+    else:
+        embed = discord.Embed(
+            title="Coin Flip",
+            description=f"{ctx.author.mention} flipped a coin and it landed on {coin}",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="", value=f"Heads is \"{heads}\"")
+        embed.add_field(name="", value=f"Tails is \"{tails}\"")
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
     logging.info(f"{ctx.author}'s ({ctx.author.id}) coin landed on {coin}")
@@ -400,6 +420,8 @@ async def eightball(ctx, question: str = None):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
+    if question is not None:
+        embed.add_field(name="The question was:", value=question)
     await ctx.reply(embed=embed, mention_author=True)
     # For slash commands, ctx.message can be None; prefer the provided question if available
     q_text = question if question is not None else (getattr(getattr(ctx, "message", None), "content", "") or "")
