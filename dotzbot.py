@@ -2,13 +2,11 @@
 
 
 # Standard library
-import json
 import logging
 import os
 import platform
 import secrets
-from datetime import datetime, time
-import time as time_module
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # Third-party
@@ -16,7 +14,6 @@ import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
-import requests
 from dotenv import load_dotenv
 
 
@@ -57,7 +54,7 @@ BOT_START_TIME = datetime.now(CESTIME)
 online = False
 
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
-logging.basicConfig(format=f"%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
 
 
 # --- Bot Events ---
@@ -190,11 +187,13 @@ async def im_alive_before_loop():
 @bot.hybrid_command(with_app_command=True, description="Get a random meme", aliases=["memes"])
 async def meme(ctx):
     gotmeme = False
+    attempts = 0
     while not gotmeme:
         async with aiohttp.ClientSession() as session:
             async with session.get("https://meme-api.com/gimme") as resp:
                 if resp.status != 200:
-                    await ctx.reply("Failed to fetch meme API.", mention_author=True)
+                    logging.info(f"{ctx.author}'s request for a meme failed, retrying")
+                    attempts += 1
                     return
                 json_data = await resp.json()
 
@@ -202,10 +201,13 @@ async def meme(ctx):
             nsfw = json_data.get("nsfw", False)
             if nsfw:
                 logging.info(f"{ctx.author} got an NSFW meme, retrying")
+                attempts += 1
                 return
 
             async with session.get(url) as img_resp:
                 if img_resp.status != 200:
+                    logging.info(f"")
+                    attempts += 1
                     return
                 img_bytes = await img_resp.read()
 
@@ -220,6 +222,8 @@ async def meme(ctx):
         embed.add_field(name="API", value="https://meme-api.com/gimme")
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, file=discord.File(fp=bio, filename="meme.png"), mention_author=True)
+        post_link = json_data.get("postLink", url)
+        logging.info(f"{ctx.author} ({ctx.author.id}) fetched meme {post_link}")
         gotmeme = True
 meme.category = "fun"
 
@@ -326,9 +330,14 @@ highcard.category = "fun"
 
 
 @bot.hybrid_command(with_app_command=True, description="Play Rock Paper Scissors, default choice is scissors")
-@app_commands.describe(choice="Your choice: rock, paper or scissors")
-async def rps(ctx, choice: str = None):
+@app_commands.describe(user_choice="Your choice: rock, paper or scissors")
+async def rps(ctx, user_choice: str = None):
+    if isinstance(user_choice, str):  # If a choice was given (defined)
+        user_choice = user_choice.lower()  # Convert it to a string for future code use
+
     rps_choices = ["rock", "paper", "scissors"]
+
+    # Default embed, when no choice is provided.
     embed = discord.Embed(
         title="$rps wrong usage",
         description="You're supposed to say either rock, paper or scissors",
@@ -336,46 +345,46 @@ async def rps(ctx, choice: str = None):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
-    if choice is None:
-        await ctx.reply(embed=embed, mention_author=True)
-        logging.info(f"{ctx.author} ({ctx.author.id}) failed to provide either rock, paper or scissors (None)")
+    if user_choice is None:
+        await ctx.reply(embed=embed, mention_author=True)  # Send default embed
+        logging.info(f"{ctx.author} ({ctx.author.id}) failed to provide either rock, paper or scissors")
         return
     else:
-        choice = choice.lower()
-        if choice not in rps_choices:
-            await ctx.reply(embed=embed, mention_author=True)
-            logging.info(f"{ctx.author} ({ctx.author.id}) failed to provide either rock, paper or scissors ({choice})")
-            return
+        if user_choice not in rps_choices:  # If choice is defined, but not an available choice
+            await ctx.reply(embed=embed, mention_author=True) # Also the default embed
+            logging.info(f"{ctx.author} ({ctx.author.id}) failed to provide either rock, paper or scissors ({user_choice})")  # it'll be funny to see typos
+            return  # to not process the rest of the code
 
-    user_choice = choice.lower()  # make the input/argument lowercase
     bot_choice = secrets.choice(rps_choices)
-    color = discord.Color.gold()
 
+    beats = {  # Dictionary, way shorter if statement with this
+        "rock": "scissors", 
+        "scissors": "paper", 
+        "paper": "rock"}
+
+    # Winner check
     if user_choice == bot_choice:
         result = "It's a tie!"
         color = discord.Color.gold()
-        logging.info(f"{ctx.author} ({ctx.author.id}) tied to {bot.user} with {user_choice}")
-    elif (user_choice == "rock" and bot_choice == "scissors") or \
-         (user_choice == "scissors" and bot_choice == "paper") or \
-         (user_choice == "paper" and bot_choice == "rock"):
-        result = f"{ctx.author.mention} wins!"  # user wins
+        logging.info(f"{ctx.author} ({ctx.author.id}) tied with {bot.user} using {user_choice}")
+    elif beats[user_choice] == bot_choice:
+        result = f"{ctx.author.mention} wins!"  # User wins
         color = discord.Color.green()
-        logging.info(f"{ctx.author} ({ctx.author.id}) wins with {user_choice} against {bot.user}'s {bot_choice}")
-    elif (bot_choice == "rock" and user_choice == "scissors") or \
-         (bot_choice == "scissors" and user_choice == "paper") or \
-         (bot_choice == "paper" and user_choice == "rock"):
-        result = f"{bot.user.mention} wins!"  # bot wins
+        logging.info(f"{ctx.author} ({ctx.author.id}) beat {bot.user} with {user_choice} against {bot_choice}")
+    else:
+        result = f"{bot.user.mention} wins!"  # Bot wins
         color = discord.Color.red()
-        logging.info(f"{bot.user} wins with {bot_choice} against {ctx.author}'s ({ctx.author.id}) {user_choice}")
+        logging.info(f"{bot.user} beat {ctx.author} ({ctx.author.id}) with {bot_choice} against {user_choice}")
 
-    embed = discord.Embed(
+    embed = discord.Embed( # Replaces the default embed
         title="Rock Paper Scissors",
-        description=(
-            f"{ctx.author.mention} chose **{user_choice.capitalize()}**\n"  # New Lines for style
-            f"{bot.user.mention} chose **{bot_choice.capitalize()}**\n\n"
-            f"{result}"
+        description=( # Multi-line description
+            f"{ctx.author.mention} chose **{user_choice.capitalize()}**\n"  # Styling
+            f"{bot.user.mention} chose **{bot_choice.capitalize()}**\n\n"  # Don't ask why I didn't just use add_fields again
+            f"{result}"  # I don't know the answer to that question xD
         ),
         color=color
+        # Both 'color' and 'result' are set from the winner check
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
@@ -434,24 +443,28 @@ eightball.category = "fun"
 @bot.command(description="Literally just blackjack", aliases=["bj"])
 async def blackjack(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $blackjack")
 blackjack.category = "gambling"
 
 
 @bot.command(description="Probably not exactly like poker, but close enough", aliases=["pk"])
 async def poker(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $poker")
 poker.category = "gambling"
 
 
 @bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
 async def guessthenumber(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $guessthenumber")
 guessthenumber.category = "gambling"
 
 
 @bot.command(description="Trivia Time!!", aliases=["quiz"])
 async def trivia(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $trivia")
 trivia.category = "gambling"
 
 
@@ -696,24 +709,28 @@ serverinfo.category = "info"
 @bot.command(description="Bans the specified user", aliases=["begone"])
 async def ban(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $ban")
 ban.category = "moderation"
 
 
 @bot.command(description="Kicks the specified user", aliases=["fuckoff"])
 async def kick(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $kick")
 kick.category = "moderation"
 
 
 @bot.command(description="Times out the specified user", aliases=["shutup"])
 async def timeout(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $timeout")
 timeout.category = "moderation"
 
 
 @bot.command(description="Unbans the specified user", aliases=["sorry", "comeback"])
 async def unban(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info(f"{ctx.author} ({ctx.author.id}) attempted to use $unban")
 unban.category = "moderation"
 
 
@@ -788,7 +805,7 @@ async def synctree(ctx):  # this entire command is written by copilot gpt5
             color=discord.Color.red()
         )
         await ctx.reply(embed=embed, mention_author=True)
-        logging.exception("Failed to globally sync application commands via $synctree")
+        logging.exception("Failed to globally sync application commands via $synctree ({e})")
 synctree.category = "admin"
 
 
