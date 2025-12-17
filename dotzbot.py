@@ -99,12 +99,14 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_guild_join(guild):
-    allowedservers = [1303080585216131082, 1345174170572554362, 907012194175176714]
-    '''Allowed Servers: (in order)
-    dotz's corner
-    gamers inc. (reincarnated)
-    .PlaySpace
-    '''
+    allowedservers = [
+        1303080585216131082, 
+        1345174170572554362, 
+        907012194175176714]
+    #   Allowed Servers: (in order)
+    #   dotz's corner
+    #   gamers inc. (reincarnated)
+    #   .PlaySpace
 
     owner = guild.owner or await bot.fetch_user(guild.owner_id)
 
@@ -580,32 +582,26 @@ botinfo.category = "info"
 
 @bot.hybrid_command(with_app_command=True, description="Get info about a User", aliases=["user", "checkuser"])
 async def userinfo(ctx, user_id: str = None):  # Defaults arg to None, unless provided
-    embed = discord.Embed(  # Set the embed first to an error message
+    embed = discord.Embed(  # Default embed in case user_id is not set
         title="$userinfo wrong usage",
         description="You're supposed to provide a user with a ping or their ID",
         color=discord.Color.red()
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
-    if user_id is None:  # Send the error if no argument is provided
+    if isinstance(user_id, str):
+        user_id = user_id.replace("<@", "").replace("!", "").replace(">", "")  # Removes ping casing to get ID only
+    else:  # If user_id wasn't provided, send the error
         await ctx.reply(embed=embed, mention_author=True)
         logging.info("%s (%s) failed to use $userinfo (%s)", ctx.author, ctx.author.id, ctx.message.content)
         return
-    elif user_id is not None:  # Check if user_id was provided
-        # Check if user_id is a ping
-        if user_id.startswith("<@") and user_id.endswith(">"):
-            user_id = user_id.replace("<@", "").replace("!", "").replace(">", "")  # Removes ping casing to get ID only
-        # If it's not a ping, it's probably an ID
-        else:
-            try:  # if it isn't an ID, it'll raise ValueError and send the error message
-                placeholder_variable = int(user_id)  # placeholder_variable, cause if it's an actual variable; it'll crash for some reason. skipcq: PYL-W0612
-            except ValueError:  # If it's not a UserID but instead some failed ping or something, it won't work
-                await ctx.reply(embed=embed, mention_author=True)
-                logging.info("%s (%s) failed to use $userinfo (%s)", ctx.author, ctx.author.id, ctx.message.content)
-                return
 
-    # Putting my full trust in the function above
-    user_id = int(user_id)  # Converts to int for fetch_user
+    try:  # if it isn't an ID, it'll raise ValueError and send the error message
+        user_id = int(user_id)
+    except ValueError:  # If it's not a UserID but instead some failed ping or something
+        await ctx.reply(embed=embed, mention_author=True)
+        logging.info("%s (%s) failed to use $userinfo (%s)", ctx.author, ctx.author.id, ctx.message.content)
+        return
 
     try:  # Attempt to fetch the user, so we can use it for information
         user = await bot.fetch_user(user_id)
@@ -629,11 +625,16 @@ async def userinfo(ctx, user_id: str = None):  # Defaults arg to None, unless pr
         description=description,
         color=discord.Color.green()
     )
+    # Stuff the bot can fetch anyways
     embed.add_field(name="Username", value=target_user.name)
     embed.add_field(name="User ID", value=str(target_user.id))
     embed.add_field(name="Account Created", value=target_user.created_at.strftime("%Y-%m-%d %H:%M:%S"))
     embed.add_field(name="Bot?", value="Yes" if target_user.bot else "No")
 
+    if target_user.avatar:  # If they have a custom pfp
+        embed.set_thumbnail(url=target_user.avatar.url)  # Sets user's pfp as thumbnail (small, top right)
+
+    # Stuff the bot can only fetch from a server
     if member_obj and member_obj.joined_at:  # If run in a server
         embed.add_field(name="Joined Server", value=member_obj.joined_at.strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -643,9 +644,7 @@ async def userinfo(ctx, user_id: str = None):  # Defaults arg to None, unless pr
             value=", ".join([role.name for role in member_obj.roles if role.name != "@everyone"])
         )
 
-    if target_user.avatar:  # If they have a custom pfp
-        embed.set_thumbnail(url=target_user.avatar.url)  # Sets user's pfp as thumbnail (small, top right)
-
+    # Nitro users only
     if hasattr(user, "banner") and user.banner:  # If they have a custom banner (Nitro Feature)
         embed.set_image(url=user.banner.url)  # Sets user's banner as image (big, underneath)
 
