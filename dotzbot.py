@@ -41,6 +41,28 @@ def get_command_count(bot):  # Partly made by chatgpt
     return visible, hidden
 
 
+async def check_allowed_server(guild):
+    allowedservers = [
+        1303080585216131082, 
+        1345174170572554362, 
+        907012194175176714]
+    #   Allowed Servers: (in order)
+    #   dotz's corner
+    #   gamers inc. (reincarnated)
+    #   .PlaySpace
+
+    owner = guild.owner or await bot.fetch_user(guild.owner_id)
+
+    if guild.id in allowedservers:
+        pass
+    else:
+        for channel in guild.text_channels:
+            if channel.permissions_for(guild.me).send_messages:
+                await channel.send(f"Sorry {owner.mention}, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
+                logging.info("Left disallowed server, %s (%s)", guild.name, guild.id)
+                break
+        await guild.leave()
+
 # --- Setup ---
 
 
@@ -62,8 +84,8 @@ logging.basicConfig(format="%(asctime)s / %(levelname)s = %(message)s", level=lo
 
 @bot.event
 async def on_ready():
-    global online
-    if not online:
+    global online  # So it's reusable
+    if not online:  # Now it won't send multiple times if the bot reconnects
         embed = discord.Embed(
             title="dotzbot is online",
             description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
@@ -73,6 +95,7 @@ async def on_ready():
         await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
         logging.info("Logged in as %s", bot.user)
         online = True
+
         # Sync application commands: first to dev guild for fast testing, then globally
         try:
             dev_guild = discord.Object(id=907012194175176714)
@@ -80,6 +103,10 @@ async def on_ready():
             logging.info("Synced application commands to dev guild %s", dev_guild.id)
         except Exception:
             logging.error("Failed to sync application commands to dev guild")
+
+        # Incase it was invited while offline
+        for guild in bot.guilds: 
+            await check_allowed_server(guild)
 
         # Removed if not is_running cause this will now only run once
         random_activity.start()
@@ -99,26 +126,7 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_guild_join(guild):
-    allowedservers = [
-        1303080585216131082, 
-        1345174170572554362, 
-        907012194175176714]
-    #   Allowed Servers: (in order)
-    #   dotz's corner
-    #   gamers inc. (reincarnated)
-    #   .PlaySpace
-
-    owner = guild.owner or await bot.fetch_user(guild.owner_id)
-
-    if guild.id in allowedservers:
-        pass
-    else:
-        for channel in guild.text_channels:
-            if channel.permissions_for(guild.me).send_messages:
-                await channel.send(f"Sorry {owner.mention}, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
-                logging.info("Left disallowed server, %s (%s)", guild.name, guild.id)
-                break
-        await guild.leave()
+    await check_allowed_server(guild)
 
 
 # --- TASKS ---
@@ -279,6 +287,37 @@ async def coinflip(ctx, heads: str = None, tails: str = None):
 coinflip.category = "fun"
 
 
+# --- MINIGAME COMMANDS ---
+
+
+@bot.command(description="Literally just blackjack", aliases=["bj"])
+async def blackjack(ctx):
+    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info("%s (%s) attempted to use $blackjack", ctx.author, ctx.author.id)
+blackjack.category = "minigame"
+
+
+@bot.command(description="Probably not exactly like poker, but close enough", aliases=["pk"])
+async def poker(ctx):
+    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info("%s (%s) attempted to use $poker", ctx.author, ctx.author.id)
+poker.category = "minigame"
+
+
+@bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
+async def guessthenumber(ctx):
+    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info("%s (%s) attempted to use $guessthenumber", ctx.author, ctx.author.id)
+guessthenumber.category = "minigame"
+
+
+@bot.command(description="Trivia Time!!", aliases=["quiz"])
+async def trivia(ctx):
+    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
+    logging.info("%s (%s) attempted to use $trivia", ctx.author, ctx.author.id)
+trivia.category = "minigame"
+
+
 @bot.hybrid_command(with_app_command=True, description="Highest card wins", aliases=["hc"])
 async def highcard(ctx):
     user_card = 1 + secrets.randbelow(13)
@@ -328,7 +367,7 @@ async def highcard(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-highcard.category = "fun"
+highcard.category = "minigame"
 
 
 @bot.hybrid_command(with_app_command=True, description="Play Rock Paper Scissors, default choice is scissors")
@@ -390,7 +429,7 @@ async def rps(ctx, user_choice: str = None):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-rps.category = "fun"
+rps.category = "minigame"
 
 
 @bot.hybrid_command(with_app_command=True, description="The wisdom of the eight ball upon you", aliases=["8ball", "8b"])
@@ -436,38 +475,7 @@ async def eightball(ctx, question: str = None):
     # For slash commands, ctx.message can be None; prefer the provided question if available
     q_text = question if question is not None else (getattr(getattr(ctx, "message", None), "content", "") or "")
     logging.info("%s's (%s) 8ball answered to '%s' with %s", ctx.author, ctx.author.id, q_text, eight_ball_real_choice)
-eightball.category = "fun"
-
-
-# --- GAMBLING COMMANDS ---
-
-
-@bot.command(description="Literally just blackjack", aliases=["bj"])
-async def blackjack(ctx):
-    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $blackjack", ctx.author, ctx.author.id)
-blackjack.category = "gambling"
-
-
-@bot.command(description="Probably not exactly like poker, but close enough", aliases=["pk"])
-async def poker(ctx):
-    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $poker", ctx.author, ctx.author.id)
-poker.category = "gambling"
-
-
-@bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
-async def guessthenumber(ctx):
-    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $guessthenumber", ctx.author, ctx.author.id)
-guessthenumber.category = "gambling"
-
-
-@bot.command(description="Trivia Time!!", aliases=["quiz"])
-async def trivia(ctx):
-    await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $trivia", ctx.author, ctx.author.id)
-trivia.category = "gambling"
+eightball.category = "minigame"
 
 
 # --- INFO COMMANDS ---
