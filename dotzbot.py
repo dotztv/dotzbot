@@ -34,7 +34,9 @@ def get_uptime() -> str:
     minutes, seconds = divmod(remainder, 60)
     return f"{int(days)}d {int(hours)}h {int(minutes)}m {int(seconds)}s"
 
-#skipcq: PYL-W0621
+# skipcq: PYL-W0621
+
+
 def get_command_count(bot):  # Partly made by chatgpt
     visible = len([cmd for cmd in bot.commands if not cmd.hidden])
     hidden = len([cmd for cmd in bot.commands if cmd.hidden])
@@ -43,8 +45,8 @@ def get_command_count(bot):  # Partly made by chatgpt
 
 async def check_allowed_server(guild):
     allowedservers = [
-        1303080585216131082, 
-        1345174170572554362, 
+        1303080585216131082,
+        1345174170572554362,
         907012194175176714]
     #   Allowed Servers: (in order)
     #   dotz's corner
@@ -59,7 +61,8 @@ async def check_allowed_server(guild):
         for channel in guild.text_channels:
             if channel.permissions_for(guild.me).send_messages:
                 await channel.send(f"Sorry {owner.mention}, This server isn't apart of dotz's allowed server list. Contact dotz for help.")
-                logging.info("Left disallowed server, %s (%s)", guild.name, guild.id)
+                logging.info("Left disallowed server, %s (%s)",
+                             guild.name, guild.id)
                 break
         await guild.leave()
 
@@ -67,16 +70,20 @@ async def check_allowed_server(guild):
 
 
 load_dotenv()
-intents = discord.Intents.all()  # Gives it all intents, TODO: Make it only have what it needs, same with permissions
-bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Sets up bot with discord.ext command prefix, all intents and removes default help command
+# Gives it all intents, TODO: Make it only have what it needs, same with permissions
+intents = discord.Intents.all()
+# Sets up bot with discord.ext command prefix, all intents and removes default help command
+bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)
 
 TOKEN = os.getenv("DISCORD_TOKEN")  # Gets the discord token from the .env file
 CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
 BOT_START_TIME = datetime.now(CESTIME).strftime("%Y-%m-%d %H:%M:%S")
 online = False
 
-handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
-logging.basicConfig(format="%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
+handler = logging.FileHandler(
+    filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
+logging.basicConfig(
+    format="%(asctime)s / %(levelname)s = %(message)s", level=logging.INFO)
 
 
 # --- Bot Events ---
@@ -91,8 +98,10 @@ async def on_ready():
             description=BOT_START_TIME,  # Formats to a more readable version
             color=discord.Color.green()
         )
-        dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
-        await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
+        # Channel ID of my server's channel for the bot
+        dotzbot_channel = bot.get_channel(1399359500049190912)
+        # Sends it to the specified channel
+        await dotzbot_channel.send(embed=embed)
         logging.info("Logged in as %s", bot.user)
         online = True
 
@@ -100,12 +109,13 @@ async def on_ready():
         try:
             dev_guild = discord.Object(id=907012194175176714)
             await bot.tree.sync(guild=dev_guild)
-            logging.info("Synced application commands to dev guild %s", dev_guild.id)
+            logging.info(
+                "Synced application commands to dev guild %s", dev_guild.id)
         except Exception:
             logging.error("Failed to sync application commands to dev guild")
 
         # Incase it was invited while offline
-        for guild in bot.guilds: 
+        for guild in bot.guilds:
             await check_allowed_server(guild)
 
         # Removed if not is_running cause this will now only run once
@@ -161,7 +171,8 @@ async def random_activity():
 
     activity_number = secrets.randbelow(len(possible_activities))
     chosen_activity = possible_activities[activity_number]
-    activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming, url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")  # may or may not be a rick roll
+    activity = discord.Streaming(name=chosen_activity, type=discord.ActivityType.streaming,
+                                 url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")  # may or may not be a rick roll
 
     await bot.change_presence(activity=activity)
 
@@ -174,14 +185,16 @@ async def before_loop():
 
 @tasks.loop(hours=24)
 async def im_alive():
-    dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
+    # Channel ID of my server's channel for the bot
+    dotzbot_channel = bot.get_channel(1399359500049190912)
     embed = discord.Embed(
         title="dotzbot hasn't crashed!",
         description=BOT_START_TIME,  # Formats to a more readable version
         color=discord.Color.yellow()
     )
     embed.add_field(name="", value=f"Uptime: {get_uptime()}")
-    await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
+    # Sends it to the specified channel
+    await dotzbot_channel.send(embed=embed)
 
 
 @im_alive.before_loop
@@ -203,7 +216,8 @@ async def meme(ctx):
         async with aiohttp.ClientSession() as session:
             async with session.get("https://meme-api.com/gimme") as resp:
                 if resp.status != 200:
-                    logging.info("%s's request for a meme failed, retrying", ctx.author)
+                    logging.info(
+                        "%s's request for a meme failed, retrying", ctx.author)
                     attempts += 1
                     return
                 json_data = await resp.json()
@@ -217,7 +231,8 @@ async def meme(ctx):
 
             async with session.get(url) as img_resp:
                 if img_resp.status != 200:
-                    logging.info("%s failed to get a meme, retrying", ctx.author)
+                    logging.info(
+                        "%s failed to get a meme, retrying", ctx.author)
                     attempts += 1
                     return
                 img_bytes = await img_resp.read()
@@ -234,7 +249,8 @@ async def meme(ctx):
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, file=discord.File(fp=bio, filename="meme.png"), mention_author=True)
         post_link = json_data.get("postLink", url)
-        logging.info("%s (%s) fetched meme %s", ctx.author, ctx.author.id, post_link)
+        logging.info("%s (%s) fetched meme %s",
+                     ctx.author, ctx.author.id, post_link)
         gotmeme = True
 meme.category = "fun"
 
@@ -249,7 +265,8 @@ async def roll(ctx, dice_sides: int = 100):
         )
         embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
         await ctx.reply(embed=embed, mention_author=True)
-        logging.info("%s (%s) just tried to roll a %s-sided dice", ctx.author, ctx.author.id, dice_sides)
+        logging.info("%s (%s) just tried to roll a %s-sided dice",
+                     ctx.author, ctx.author.id, dice_sides)
         return  # to not continue code
 
     dice_roll = 1 + secrets.randbelow(dice_sides)
@@ -260,7 +277,8 @@ async def roll(ctx, dice_sides: int = 100):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) rolled a %s-sided dice and got %s", ctx.author, ctx.author.id, dice_sides, dice_roll)
+    logging.info("%s (%s) rolled a %s-sided dice and got %s",
+                 ctx.author, ctx.author.id, dice_sides, dice_roll)
 roll.category = "fun"
 
 
@@ -284,7 +302,8 @@ async def coinflip(ctx, heads: str = None, tails: str = None):
         embed.add_field(name="", value=f"Tails is \"{tails}\"")
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s's (%s) coin landed on %s", ctx.author, ctx.author.id, coin)
+    logging.info("%s's (%s) coin landed on %s",
+                 ctx.author, ctx.author.id, coin)
 coinflip.category = "fun"
 
 
@@ -294,7 +313,8 @@ coinflip.category = "fun"
 @bot.command(description="Literally just blackjack", aliases=["bj"])
 async def blackjack(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $blackjack", ctx.author, ctx.author.id)
+    logging.info("%s (%s) attempted to use $blackjack",
+                 ctx.author, ctx.author.id)
 blackjack.category = "minigame"
 
 
@@ -308,7 +328,8 @@ poker.category = "minigame"
 @bot.command(description="Can you guess the bot's number?", aliases=["gnm"])
 async def guessthenumber(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $guessthenumber", ctx.author, ctx.author.id)
+    logging.info("%s (%s) attempted to use $guessthenumber",
+                 ctx.author, ctx.author.id)
 guessthenumber.category = "minigame"
 
 
@@ -351,15 +372,18 @@ async def highcard(ctx):
     if user_card > bot_card:  # If user wins
         embeddesc = f"{ctx.author.mention} won with a {readable_user_card} against {bot.user.mention}'s {readable_bot_card}"
         embedcolor = discord.Color.green()
-        logging.info("%s (%s) won with a %s against %s's %s", ctx.author, ctx.author.id, readable_user_card, bot.user, readable_bot_card)
+        logging.info("%s (%s) won with a %s against %s's %s", ctx.author,
+                     ctx.author.id, readable_user_card, bot.user, readable_bot_card)
     elif bot_card > user_card:  # or bot wins
         embeddesc = f"{bot.user.mention} won with a {readable_bot_card} against {ctx.author.mention}'s {readable_user_card}"
         embedcolor = discord.Color.red()
-        logging.info("%s won with a %s against %s's (%s) %s", bot.user, readable_bot_card, ctx.author, ctx.author.id, readable_user_card)
+        logging.info("%s won with a %s against %s's (%s) %s", bot.user,
+                     readable_bot_card, ctx.author, ctx.author.id, readable_user_card)
     else:  # or it's a tie
         embeddesc = f"It's a tie! Both drew a {readable_user_card}"
         embedcolor = discord.Color.yellow()
-        logging.info("%s (%s) tied with %s with %s", ctx.author, ctx.author.id, bot.user, readable_user_card)
+        logging.info("%s (%s) tied with %s with %s", ctx.author,
+                     ctx.author.id, bot.user, readable_user_card)
 
     embed = discord.Embed(
         title="High Card Result",
@@ -389,40 +413,47 @@ async def rps(ctx, user_choice: str = None):
 
     if user_choice is None:
         await ctx.reply(embed=embed, mention_author=True)  # Send default embed
-        logging.info("%s (%s) failed to provide either rock, paper or scissors", ctx.author, ctx.author.id)
+        logging.info(
+            "%s (%s) failed to provide either rock, paper or scissors", ctx.author, ctx.author.id)
         return
     else:
         if user_choice not in rps_choices:  # If choice is defined, but not an available choice
-            await ctx.reply(embed=embed, mention_author=True) # Also the default embed
-            logging.info("%s (%s) failed to provide either rock, paper or scissors (%s)", ctx.author, ctx.author.id, user_choice)  # it'll be funny to see typos
+            # Also the default embed
+            await ctx.reply(embed=embed, mention_author=True)
+            logging.info("%s (%s) failed to provide either rock, paper or scissors (%s)",
+                         ctx.author, ctx.author.id, user_choice)  # it'll be funny to see typos
             return  # to not process the rest of the code
 
     bot_choice = secrets.choice(rps_choices)
 
     beats = {  # Dictionary, way shorter if statement with this
-        "rock": "scissors", 
-        "scissors": "paper", 
+        "rock": "scissors",
+        "scissors": "paper",
         "paper": "rock"}
 
     # Winner check
     if user_choice == bot_choice:
         result = "It's a tie!"
         color = discord.Color.gold()
-        logging.info("%s (%s) tied with %s using %s", ctx.author, ctx.author.id, bot.user, user_choice)
+        logging.info("%s (%s) tied with %s using %s", ctx.author,
+                     ctx.author.id, bot.user, user_choice)
     elif beats[user_choice] == bot_choice:
         result = f"{ctx.author.mention} wins!"  # User wins
         color = discord.Color.green()
-        logging.info("%s (%s) beat %s with %s against %s", ctx.author, ctx.author.id, bot.user, user_choice, bot_choice)
+        logging.info("%s (%s) beat %s with %s against %s", ctx.author,
+                     ctx.author.id, bot.user, user_choice, bot_choice)
     else:
         result = f"{bot.user.mention} wins!"  # Bot wins
         color = discord.Color.red()
-        logging.info("%s beat %s (%s) with %s against %s", bot.user, ctx.author, ctx.author.id, bot_choice, user_choice)
+        logging.info("%s beat %s (%s) with %s against %s", bot.user,
+                     ctx.author, ctx.author.id, bot_choice, user_choice)
 
-    embed = discord.Embed( # Replaces the default embed
+    embed = discord.Embed(  # Replaces the default embed
         title="Rock Paper Scissors",
-        description=( # Multi-line description
+        description=(  # Multi-line description
             f"{ctx.author.mention} chose **{user_choice.capitalize()}**\n"  # Styling
-            f"{bot.user.mention} chose **{bot_choice.capitalize()}**\n\n"  # Don't ask why I didn't just use add_fields again
+            # Don't ask why I didn't just use add_fields again
+            f"{bot.user.mention} chose **{bot_choice.capitalize()}**\n\n"
             f"{result}"  # I don't know the answer to that question xD
         ),
         color=color
@@ -450,7 +481,8 @@ async def eightball(ctx, question: str = None):
         "idk, ask the next guy"
     ]
 
-    eight_ball_answers = ["yes", "no", "unknown"]  # makes it equal chance for yes, no or unknown in case there are different amounts of strings in each list
+    # makes it equal chance for yes, no or unknown in case there are different amounts of strings in each list
+    eight_ball_answers = ["yes", "no", "unknown"]
     eight_ball_first_choice = secrets.choice(eight_ball_answers)
 
     if eight_ball_first_choice == "yes":
@@ -474,8 +506,10 @@ async def eightball(ctx, question: str = None):
         embed.add_field(name="The question was:", value=question)
     await ctx.reply(embed=embed, mention_author=True)
     # For slash commands, ctx.message can be None; prefer the provided question if available
-    q_text = question if question is not None else (getattr(getattr(ctx, "message", None), "content", "") or "")
-    logging.info("%s's (%s) 8ball answered to '%s' with %s", ctx.author, ctx.author.id, q_text, eight_ball_real_choice)
+    q_text = question if question is not None else (
+        getattr(getattr(ctx, "message", None), "content", "") or "")
+    logging.info("%s's (%s) 8ball answered to '%s' with %s",
+                 ctx.author, ctx.author.id, q_text, eight_ball_real_choice)
 eightball.category = "minigame"
 
 
@@ -483,12 +517,13 @@ eightball.category = "minigame"
 
 
 @bot.hybrid_command(with_app_command=True, description="Shows this list!", aliases=["?"])
-async def help(ctx): #skipcq: PYL-W0622
+async def help(ctx):  # skipcq: PYL-W0622
     is_owner = False
 
     try:
         is_owner = await bot.is_owner(ctx.author)
-    except (discord.HTTPException, discord.Forbidden, discord.NotFound):  # Connection Failed (API Unreachable / Network Issue), No Permission or User doesn't exist
+    # Connection Failed (API Unreachable / Network Issue), No Permission or User doesn't exist
+    except (discord.HTTPException, discord.Forbidden, discord.NotFound):
         pass
 
     embed = discord.Embed(
@@ -513,7 +548,8 @@ help.category = "info"
 
 @bot.hybrid_command(with_app_command=True, description="Show the bot's latency", aliases=["latency", "lag", "ms"])
 async def ping(ctx):
-    latency = round(bot.latency * 1000)  # Copilot told me to multiply this by a thousand so
+    # Copilot told me to multiply this by a thousand so
+    latency = round(bot.latency * 1000)
     embed = discord.Embed(
         title="Pong!",
         description=f"Latency: {latency} ms",
@@ -521,7 +557,8 @@ async def ping(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) used the $ping command (%sms)", ctx.author, ctx.author.id, latency)
+    logging.info("%s (%s) used the $ping command (%sms)",
+                 ctx.author, ctx.author.id, latency)
 ping.category = "info"
 
 
@@ -535,14 +572,15 @@ async def uptime(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) used the $uptime command (%s)", ctx.author, ctx.author.id, uptime_str)
+    logging.info("%s (%s) used the $uptime command (%s)",
+                 ctx.author, ctx.author.id, uptime_str)
 uptime.category = "info"
 
 
 @bot.hybrid_command(with_app_command=True, description="General info about the bot", aliases=["bot", "about"])
 async def botinfo(ctx):
     # Fetch commit code, by chatgpt ofc
-    async with aiohttp.ClientSession() as session: #skipcq: PTC-W0062
+    async with aiohttp.ClientSession() as session:  # skipcq: PTC-W0062
         async with session.get("https://api.github.com/repos/dotztv/dotzbot/commits") as resp:
             if resp.status == 200:
                 data = await resp.json()
@@ -568,11 +606,14 @@ async def botinfo(ctx):
     )
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     embed.add_field(name="Open-Source Info", value=f"", inline=False)
-    embed.add_field(name="GitHub Link", value="[dotztv/dotzbot](https://github.com/dotztv/dotzbot)")
-    embed.add_field(name="Latest Commit", value=f"[{commit_sha}]({commit_url})")
+    embed.add_field(name="GitHub Link",
+                    value="[dotztv/dotzbot](https://github.com/dotztv/dotzbot)")
+    embed.add_field(name="Latest Commit",
+                    value=f"[{commit_sha}]({commit_url})")
     embed.add_field(name="Commit Message", value=commit_msg)
     embed.add_field(name="Support", value="", inline=False)
-    embed.add_field(name="Discord Server", value="[dotz's corner](https://discord.gg/WgzRu2NB7S)")
+    embed.add_field(name="Discord Server",
+                    value="[dotz's corner](https://discord.gg/WgzRu2NB7S)")
     embed.add_field(name="Developer DMs", value="@<550378971426979856>")
     embed.add_field(name="Software", value="", inline=False)
     embed.add_field(name="discord.py version", value=discord.__version__)
@@ -583,9 +624,11 @@ async def botinfo(ctx):
     embed.add_field(name="Statistics", value="", inline=False)
     embed.add_field(name="Current Log Length", value=log_line_count)
     embed.add_field(name="Server Count", value=len(bot.guilds))
-    embed.add_field(name="Command Amount", value=f"{total} ({hidden})")  # for example, 9 total commands, 2 of which are hidden.
+    # for example, 9 total commands, 2 of which are hidden.
+    embed.add_field(name="Command Amount", value=f"{total} ({hidden})")
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) used the $botinfo command", ctx.author, ctx.author.id)
+    logging.info("%s (%s) used the $botinfo command",
+                 ctx.author, ctx.author.id)
 botinfo.category = "info"
 
 
@@ -599,26 +642,32 @@ async def userinfo(ctx, user_id: str = None):  # Defaults arg to None, unless pr
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
 
     if isinstance(user_id, str):
-        user_id = user_id.replace("<@", "").replace("!", "").replace(">", "")  # Removes ping casing to get ID only
+        # Removes ping casing to get ID only
+        user_id = user_id.replace("<@", "").replace("!", "").replace(">", "")
     else:  # If user_id wasn't provided, send the error
         await ctx.reply(embed=embed, mention_author=True)
-        logging.info("%s (%s) failed to use $userinfo (%s)", ctx.author, ctx.author.id, ctx.message.content)
+        logging.info("%s (%s) failed to use $userinfo (%s)",
+                     ctx.author, ctx.author.id, ctx.message.content)
         return
 
     try:  # if it isn't an ID, it'll raise ValueError and send the error message
         user_id = int(user_id)
     except ValueError:  # If it's not a UserID but instead some failed ping or something
         await ctx.reply(embed=embed, mention_author=True)
-        logging.info("%s (%s) failed to use $userinfo (%s)", ctx.author, ctx.author.id, ctx.message.content)
+        logging.info("%s (%s) failed to use $userinfo (%s)",
+                     ctx.author, ctx.author.id, ctx.message.content)
         return
 
     try:  # Attempt to fetch the user, so we can use it for information
         user = await bot.fetch_user(user_id)
-        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None  # gets member object if in a server -github copilot
-        target_user = member_obj if member_obj else user  # not going to lie, i dont know why this is here but i'm too scared to remove it
+        # gets member object if in a server -github copilot
+        member_obj = ctx.guild.get_member(user_id) if ctx.guild else None
+        # not going to lie, i dont know why this is here but i'm too scared to remove it
+        target_user = member_obj if member_obj else user
     except (discord.NotFound):  # User doesn't exist
         await ctx.reply("User doesn't seem to exist? Try again with copying their ID or pinging them", mention_author=True)
-        logging.error("%s (%s) provided a user we couldn't fetch? (%s)", ctx.author, ctx.author.id, ctx.message.content)
+        logging.error("%s (%s) provided a user we couldn't fetch? (%s)",
+                      ctx.author, ctx.author.id, ctx.message.content)
         return
 
     # Special people
@@ -637,29 +686,35 @@ async def userinfo(ctx, user_id: str = None):  # Defaults arg to None, unless pr
     # Stuff the bot can fetch anyways
     embed.add_field(name="Username", value=target_user.name)
     embed.add_field(name="User ID", value=str(target_user.id))
-    embed.add_field(name="Account Created", value=target_user.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+    embed.add_field(name="Account Created",
+                    value=target_user.created_at.strftime("%Y-%m-%d %H:%M:%S"))
     embed.add_field(name="Bot?", value="Yes" if target_user.bot else "No")
 
     if target_user.avatar:  # If they have a custom pfp
-        embed.set_thumbnail(url=target_user.avatar.url)  # Sets user's pfp as thumbnail (small, top right)
+        # Sets user's pfp as thumbnail (small, top right)
+        embed.set_thumbnail(url=target_user.avatar.url)
 
     # Stuff the bot can only fetch from a server
     if member_obj and member_obj.joined_at:  # If run in a server
-        embed.add_field(name="Joined Server", value=member_obj.joined_at.strftime("%Y-%m-%d %H:%M:%S"))
+        embed.add_field(name="Joined Server",
+                        value=member_obj.joined_at.strftime("%Y-%m-%d %H:%M:%S"))
 
     if member_obj and member_obj.roles:
         embed.add_field(
             name="Roles",
-            value=", ".join([role.name for role in member_obj.roles if role.name != "@everyone"])
+            value=", ".join(
+                [role.name for role in member_obj.roles if role.name != "@everyone"])
         )
 
     # Nitro users only
     if hasattr(user, "banner") and user.banner:  # If they have a custom banner (Nitro Feature)
-        embed.set_image(url=user.banner.url)  # Sets user's banner as image (big, underneath)
+        # Sets user's banner as image (big, underneath)
+        embed.set_image(url=user.banner.url)
 
     embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) used %s", ctx.author, ctx.author.id, ctx.message.content)
+    logging.info("%s (%s) used %s", ctx.author,
+                 ctx.author.id, ctx.message.content)
 userinfo.category = "info"
 
 
@@ -684,29 +739,47 @@ async def serverinfo(ctx):
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon.url)
         if ctx.guild.description:
-            embed.add_field(name="Server Description", value=str(ctx.guild.description), inline=False)
+            embed.add_field(name="Server Description", value=str(
+                ctx.guild.description), inline=False)
         embed.add_field(name="Server ID", value=str(ctx.guild.id), inline=True)
-        embed.add_field(name="Server Creation Date", value=ctx.guild.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
-        embed.add_field(name="Server Member Count", value=str(ctx.guild.member_count), inline=True)
-        embed.add_field(name="Server Owner", value=str(ctx.guild.owner), inline=True)
-        embed.add_field(name="Verification Level", value=str(ctx.guild.verification_level), inline=True)
-        embed.add_field(name="AFK Channel", value=str(ctx.guild.afk_channel), inline=True)
-        embed.add_field(name="AFK Timeout", value=str(ctx.guild.afk_timeout), inline=True)
-        embed.add_field(name="Server Boosts", value=str(ctx.guild.premium_subscription_count), inline=True)
-        embed.add_field(name="Server Features", value=str(ctx.guild.features), inline=False)
+        embed.add_field(name="Server Creation Date", value=ctx.guild.created_at.strftime(
+            "%Y-%m-%d %H:%M:%S"), inline=True)
+        embed.add_field(name="Server Member Count", value=str(
+            ctx.guild.member_count), inline=True)
+        embed.add_field(name="Server Owner", value=str(
+            ctx.guild.owner), inline=True)
+        embed.add_field(name="Verification Level", value=str(
+            ctx.guild.verification_level), inline=True)
+        embed.add_field(name="AFK Channel", value=str(
+            ctx.guild.afk_channel), inline=True)
+        embed.add_field(name="AFK Timeout", value=str(
+            ctx.guild.afk_timeout), inline=True)
+        embed.add_field(name="Server Boosts", value=str(
+            ctx.guild.premium_subscription_count), inline=True)
+        embed.add_field(name="Server Features", value=str(
+            ctx.guild.features), inline=False)
     else:  # If not run in a server, therefore DM
-        embed.add_field(name="Channel ID", value=str(ctx.channel.id), inline=True)
-        embed.add_field(name="Channel Creation Date", value=ctx.channel.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
-        embed.add_field(name="Channel Type", value=str(ctx.channel.type), inline=True)
-        embed.add_field(name="Your Username", value=ctx.author.name, inline=True)
-        embed.add_field(name="Your User ID", value=str(ctx.author.id), inline=True)
-        embed.add_field(name="Your Account Created", value=ctx.author.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
-        embed.add_field(name="Are you a bot?", value="Yes" if ctx.author.bot else "No", inline=True)
+        embed.add_field(name="Channel ID", value=str(
+            ctx.channel.id), inline=True)
+        embed.add_field(name="Channel Creation Date", value=ctx.channel.created_at.strftime(
+            "%Y-%m-%d %H:%M:%S"), inline=True)
+        embed.add_field(name="Channel Type", value=str(
+            ctx.channel.type), inline=True)
+        embed.add_field(name="Your Username",
+                        value=ctx.author.name, inline=True)
+        embed.add_field(name="Your User ID", value=str(
+            ctx.author.id), inline=True)
+        embed.add_field(name="Your Account Created", value=ctx.author.created_at.strftime(
+            "%Y-%m-%d %H:%M:%S"), inline=True)
+        embed.add_field(name="Are you a bot?",
+                        value="Yes" if ctx.author.bot else "No", inline=True)
         if ctx.author.avatar:
-            embed.set_thumbnail(url=ctx.author.avatar.url)  # Sets user's pfp as thumbnail (small, top right)
+            # Sets user's pfp as thumbnail (small, top right)
+            embed.set_thumbnail(url=ctx.author.avatar.url)
 
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) used the $serverinfo command in %s", ctx.author, ctx.author.id, ctx.guild)
+    logging.info("%s (%s) used the $serverinfo command in %s",
+                 ctx.author, ctx.author.id, ctx.guild)
 serverinfo.category = "info"
 
 
@@ -731,7 +804,8 @@ kick.category = "moderation"
 @bot.command(description="Times out the specified user", aliases=["shutup"])
 async def timeout(ctx):
     await ctx.reply("This command isn't complete yet! To be honest, I don't know if it ever will.", mention_author=True)
-    logging.info("%s (%s) attempted to use $timeout", ctx.author, ctx.author.id)
+    logging.info("%s (%s) attempted to use $timeout",
+                 ctx.author, ctx.author.id)
 timeout.category = "moderation"
 
 
@@ -782,7 +856,8 @@ async def serverlist(ctx):
             inline=False
         )
     await ctx.reply(embed=embed, mention_author=True)
-    logging.info("%s (%s) used $serverlist command (%s servers)", ctx.author, ctx.author.id, len(bot.guilds))
+    logging.info("%s (%s) used $serverlist command (%s servers)",
+                 ctx.author, ctx.author.id, len(bot.guilds))
 serverlist.category = "admin"
 
 
@@ -805,7 +880,8 @@ async def synctree(ctx):  # this entire command is written by copilot gpt5
             color=discord.Color.green()
         )
         await ctx.reply(embed=embed, mention_author=True)
-        logging.info("%s (%s) ran $synctree: global sync successful", ctx.author, ctx.author.id)
+        logging.info("%s (%s) ran $synctree: global sync successful",
+                     ctx.author, ctx.author.id)
     except Exception as e:
         embed = discord.Embed(
             title="Global sync failed",
@@ -813,7 +889,8 @@ async def synctree(ctx):  # this entire command is written by copilot gpt5
             color=discord.Color.red()
         )
         await ctx.reply(embed=embed, mention_author=True)
-        logging.exception("Failed to globally sync application commands via $synctree (%s)", e)
+        logging.exception(
+            "Failed to globally sync application commands via $synctree (%s)", e)
 synctree.category = "admin"
 
 
