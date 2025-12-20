@@ -72,7 +72,7 @@ bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)  # Se
 
 TOKEN = os.getenv("DISCORD_TOKEN")  # Gets the discord token from the .env file
 CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
-BOT_START_TIME = datetime.now(CESTIME)
+BOT_START_TIME = datetime.now(CESTIME).strftime("%Y-%m-%d %H:%M:%S")
 online = False
 
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")  # Sets up logging
@@ -88,7 +88,7 @@ async def on_ready():
     if not online:  # Now it won't send multiple times if the bot reconnects
         embed = discord.Embed(
             title="dotzbot is online",
-            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+            description=BOT_START_TIME,  # Formats to a more readable version
             color=discord.Color.green()
         )
         dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
@@ -177,9 +177,10 @@ async def im_alive():
     dotzbot_channel = bot.get_channel(1399359500049190912)  # Channel ID of my server's channel for the bot
     embed = discord.Embed(
         title="dotzbot hasn't crashed!",
-        description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+        description=BOT_START_TIME,  # Formats to a more readable version
         color=discord.Color.yellow()
     )
+    embed.add_field(name="", value=f"Uptime: {get_uptime()}")
     await dotzbot_channel.send(embed=embed)  # Sends it to the specified channel
 
 
