@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 # Third-party
 import aiohttp
 import discord
-from discord import app_commands
+from discord import app_commands, Button, ButtonStyle
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
@@ -77,7 +77,7 @@ bot = commands.Bot(command_prefix="$", intents=intents, help_command=None)
 
 TOKEN = os.getenv("DISCORD_TOKEN")  # Gets the discord token from the .env file
 CESTIME = ZoneInfo("Europe/Oslo")  # should definetely name that better
-BOT_START_TIME = datetime.now(CESTIME).strftime("%Y-%m-%d %H:%M:%S")
+BOT_START_TIME = datetime.now(CESTIME)
 online = False
 
 handler = logging.FileHandler(
@@ -95,7 +95,7 @@ async def on_ready():
     if not online:  # Now it won't send multiple times if the bot reconnects
         embed = discord.Embed(
             title="dotzbot is online",
-            description=BOT_START_TIME,  # Formats to a more readable version
+            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
             color=discord.Color.green()
         )
         # Channel ID of my server's channel for the bot
@@ -103,7 +103,6 @@ async def on_ready():
         # Sends it to the specified channel
         await dotzbot_channel.send(embed=embed)
         logging.info("Logged in as %s", bot.user)
-        online = True
 
         # Sync application commands: first to dev guild for fast testing, then globally
         try:
@@ -121,6 +120,7 @@ async def on_ready():
         # Removed if not is_running cause this will now only run once
         random_activity.start()
         im_alive.start()
+        online = True
 
 
 @bot.event  # Vibe coded error handler
@@ -185,22 +185,17 @@ async def before_loop():
 
 @tasks.loop(hours=24)
 async def im_alive():
-    # Channel ID of my server's channel for the bot
-    dotzbot_channel = bot.get_channel(1399359500049190912)
-    embed = discord.Embed(
-        title="dotzbot hasn't crashed!",
-        description=BOT_START_TIME,  # Formats to a more readable version
-        color=discord.Color.yellow()
-    )
-    embed.add_field(name="", value=f"Uptime: {get_uptime()}")
-    # Sends it to the specified channel
-    await dotzbot_channel.send(embed=embed)
-
-
-@im_alive.before_loop
-async def im_alive_before_loop():
-    await bot.wait_until_ready()
-    logging.info("Started im_alive")
+    if not online:  # no idea if this will work, meant to run before the online var is on
+        # Channel ID of my server's channel for the bot
+        dotzbot_channel = bot.get_channel(1399359500049190912)
+        embed = discord.Embed(
+            title="dotzbot hasn't crashed!",
+            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+            color=discord.Color.yellow()
+        )
+        embed.add_field(name="", value=f"Uptime: {get_uptime()}")
+        # Sends it to the specified channel
+        await dotzbot_channel.send(embed=embed)
 
 
 # Removed osu!pp war thing, maybe i should use the ossapi for a command?
@@ -830,7 +825,8 @@ async def shutdown(ctx):
     )
 
     embed.add_field(name="", value=f"Uptime: {get_uptime()}")
-    dotzbot_channel = bot.get_channel(1399359500049190912)
+    embed.add_field(name="Started at", value=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"))
+    dotzbot_channel = bot.fetch_channel(1399359500049190912)
     emoji = "✅"  # defines emoji to react with
     await ctx.message.add_reaction(emoji)
     await dotzbot_channel.send(embed=embed)
@@ -892,6 +888,33 @@ async def synctree(ctx):  # this entire command is written by copilot gpt5
         logging.exception(
             "Failed to globally sync application commands via $synctree (%s)", e)
 synctree.category = "admin"
+
+
+# --- TEST COMMANDS ---
+
+
+class button_test_view(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=30)  # seconds; set None for persistent
+
+    @discord.ui.button(label="click me cause im a button", style=discord.ButtonStyle.red)
+    async def click_me(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("congrats on doing el click", ephemeral=True)
+
+    @discord.ui.button(label="im another button", style=discord.ButtonStyle.green)
+    async def green_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("you picked the green button!", ephemeral=True)
+
+    @discord.ui.button(label="you dont see me", style=discord.ButtonStyle.grey)
+    async def special_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("no way! you saw me! here's a special role", ephemeral=True)
+        special_button_role = interaction.guild.get_role(1452851739647672471)
+        await interaction.user.add_roles(special_button_role)
+        # needs check if in correct server, or a try except
+
+@bot.command(description="Button Test", hidden=True)
+async def button(ctx):
+    await ctx.reply("these only work for 30 seconds", view=button_test_view())
 
 
 bot.run(TOKEN, log_handler=handler, log_level=logging.INFO)
