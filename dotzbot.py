@@ -95,7 +95,8 @@ async def on_ready():
     if not online:  # Now it won't send multiple times if the bot reconnects
         embed = discord.Embed(
             title="dotzbot is online",
-            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+            # Formats to a more readable version
+            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),
             color=discord.Color.green()
         )
         # Channel ID of my server's channel for the bot
@@ -190,7 +191,8 @@ async def im_alive():
         dotzbot_channel = bot.get_channel(1399359500049190912)
         embed = discord.Embed(
             title="dotzbot hasn't crashed!",
-            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),  # Formats to a more readable version
+            # Formats to a more readable version
+            description=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"),
             color=discord.Color.yellow()
         )
         embed.add_field(name="", value=f"Uptime: {get_uptime()}")
@@ -825,7 +827,8 @@ async def shutdown(ctx):
     )
 
     embed.add_field(name="", value=f"Uptime: {get_uptime()}")
-    embed.add_field(name="Started at", value=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"))
+    embed.add_field(name="Started at",
+                    value=BOT_START_TIME.strftime("%Y-%m-%d %H:%M:%S"))
     dotzbot_channel = bot.fetch_channel(1399359500049190912)
     emoji = "✅"  # defines emoji to react with
     await ctx.message.add_reaction(emoji)
@@ -911,6 +914,7 @@ class button_test_view(discord.ui.View):
         special_button_role = interaction.guild.get_role(1452851739647672471)
         await interaction.user.add_roles(special_button_role)
         # needs check if in correct server, or a try except
+
 
 @bot.command(description="Button Test", hidden=True)
 async def button(ctx):
